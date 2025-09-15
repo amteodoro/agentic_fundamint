@@ -1,0 +1,18 @@
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.env
+
+# Node
+frontend/node_modules/
+frontend/.next/
+
+# OS generated files
+.DS_Store
+
+# Miscellaneous
+copy_of_stock_analyzer_gradio_dashboard.py
+frontend/Screenshot 2025-08-26 at 18.40.04.png

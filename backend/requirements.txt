@@ -1,0 +1,49 @@
+fastapi
+multitasking
+protobuf
+scipy
+uvicorn
+websockets
+yfinance
+
+# For data processing and manipulation
+pandas
+numpy
+
+# For type hinting and validation
+pydantic
+typing-extensions
+
+# For testing
+pytest
+pytest-asyncio
+
+# # For static analysis
+# ruff
+
+# # For web scraping (if needed for future features)
+# beautifulsoup4
+# soupsieve
+# lxml
+
+# # For HTTP requests (if needed for future features)
+# requests
+
+
+# For data visualization (if needed for future features)
+matplotlib
+
+# # For Gradio (if needed for future features)
+# gradio==4.36.1
+# gradio_client==0.17.0
+
+# For investiny, fix-yahoo-finance, finvizfinance
+finvizfinance
+
+# From agentic_chatbot
+langchain>=0.3.26
+langchain-community>=0.3.27
+langchain-mcp-adapters>=0.1.8
+langchain-openai>=0.3.27
+langgraph>=0.5.1
+python-dotenv>=1.1.1
