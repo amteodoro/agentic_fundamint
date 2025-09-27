@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label } from 'recharts';
+import { formatNumber, CustomTooltip, COLORS } from '@/lib/chart-utils';
 
 interface PriceData {
   Date: string;
@@ -24,7 +25,8 @@ export function PriceChart({ ticker }: { ticker: string }) {
             throw new Error('Failed to fetch price history.');
           }
           const result = await response.json();
-          setData(result.history);
+          const sortedData = result.history.sort((a: PriceData, b: PriceData) => new Date(a.Date).getTime() - new Date(b.Date).getTime());
+          setData(sortedData);
         } catch (err: any) {
           setError(err.message);
         } finally {
@@ -35,9 +37,31 @@ export function PriceChart({ ticker }: { ticker: string }) {
     }
   }, [ticker]);
 
-  if (loading) return <p>Loading price chart...</p>;
+  if (loading) return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Price Chart</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[300px] w-full flex items-center justify-center">
+          <p>Loading price chart...</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
   if (error) return <p className="text-red-500">{error}</p>;
-  if (!data.length) return <p>No price data available.</p>;
+  if (!data.length) return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Price Chart</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[300px] w-full flex items-center justify-center">
+          <p>No price data available.</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <Card>
@@ -47,12 +71,13 @@ export function PriceChart({ ticker }: { ticker: string }) {
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.5} />
             <XAxis dataKey="Date" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="Close" stroke="#8884d8" />
+            <YAxis tickFormatter={(tick) => formatNumber(tick, 2)}>
+              <Label value="Price (USD)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
+            </YAxis>
+            <Tooltip content={<CustomTooltip />} />
+            <Line type="monotone" dataKey="Close" stroke={COLORS[0]} dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </CardContent>

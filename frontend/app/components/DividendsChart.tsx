@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label } from 'recharts';
+import { formatNumber, CustomTooltip, COLORS } from '@/lib/chart-utils';
 
 interface DividendData {
   Date: string;
@@ -40,7 +41,8 @@ export function DividendsChart({ ticker }: { ticker: string }) {
             Dividends: annualDividends[year],
           }));
 
-          setData(chartData);
+          const sortedData = chartData.sort((a, b) => Number(a.Date) - Number(b.Date));
+          setData(sortedData);
         } catch (err: any) {
           setError(err.message);
         } finally {
@@ -51,9 +53,31 @@ export function DividendsChart({ ticker }: { ticker: string }) {
     }
   }, [ticker]);
 
-  if (loading) return <p>Loading dividends chart...</p>;
+  if (loading) return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Annual Dividends</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[300px] w-full flex items-center justify-center">
+          <p>Loading dividends chart...</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
   if (error) return <p className="text-red-500">{error}</p>;
-  if (!data.length) return <p>No dividend data available.</p>;
+  if (!data.length) return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Annual Dividends</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[300px] w-full flex items-center justify-center">
+          <p>No dividend data available.</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <Card>
@@ -63,12 +87,13 @@ export function DividendsChart({ ticker }: { ticker: string }) {
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.5} />
             <XAxis dataKey="Date" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="Dividends" fill="#8884d8" />
+            <YAxis tickFormatter={(tick) => formatNumber(tick, 2)}>
+              <Label value="Dividends (USD)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
+            </YAxis>
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="Dividends" fill={COLORS[0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
