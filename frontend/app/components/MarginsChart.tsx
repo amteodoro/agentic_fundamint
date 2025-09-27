@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label } from 'recharts';
+import { CustomTooltip, COLORS, formatNumber } from '@/lib/chart-utils';
 
 interface MarginsData {
   Date: string;
@@ -26,7 +27,8 @@ export function MarginsChart({ ticker }: { ticker: string }) {
           if (!financialsRes.ok) throw new Error('Failed to fetch financials for margins.');
           const financialsData = await financialsRes.json();
           
-          const margins = financialsData.financials.map((d: any) => {
+          const sortedFinancials = financialsData.financials.sort((a: any, b: any) => new Date(a.Date).getTime() - new Date(b.Date).getTime());
+          const margins = sortedFinancials.map((d: any) => {
             const revenue = d["Total Revenue"];
             return {
               Date: d.Date.split('-')[0],
@@ -47,9 +49,33 @@ export function MarginsChart({ ticker }: { ticker: string }) {
     }
   }, [ticker]);
 
-  if (loading) return <p>Loading margins chart...</p>;
+  if (loading) return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Profit Margins</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[300px] w-full flex items-center justify-center">
+          <p>Loading margins chart...</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
   if (error) return <p className="text-red-500">{error}</p>;
-  if (!data.length) return <p>No margins data available.</p>;
+  if (!data.length) return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Profit Margins</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[300px] w-full flex items-center justify-center">
+          <p>No margins data available.</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const formatYAxis = (tick: number) => `${formatNumber(tick, 0)}%`;
 
   return (
     <Card>
@@ -59,15 +85,17 @@ export function MarginsChart({ ticker }: { ticker: string }) {
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.5} />
             <XAxis dataKey="Date" />
-            <YAxis unit="%" />
-            <Tooltip formatter={(value: number) => `${value.toFixed(2)}%`} />
+            <YAxis tickFormatter={formatYAxis}>
+              <Label value="Margin (%)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
+            </YAxis>
+            <Tooltip content={<CustomTooltip />} />
             <Legend />
-            <Line type="monotone" dataKey="Gross Margin" stroke="#8884d8" />
-            <Line type="monotone" dataKey="Net Margin" stroke="#82ca9d" />
-            <Line type="monotone" dataKey="Op. Margin" stroke="#ffc658" />
-            <Line type="monotone" dataKey="EBITDA Margin" stroke="#ff7300" />
+            <Line type="monotone" dataKey="Gross Margin" stroke={COLORS[0]} />
+            <Line type="monotone" dataKey="Net Margin" stroke={COLORS[1]} />
+            <Line type="monotone" dataKey="Op. Margin" stroke={COLORS[2]} />
+            <Line type="monotone" dataKey="EBITDA Margin" stroke={COLORS[3]} />
           </LineChart>
         </ResponsiveContainer>
       </CardContent>
