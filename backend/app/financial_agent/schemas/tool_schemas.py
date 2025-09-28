@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field
 from typing import Dict, List, Optional, Any, Union
 from enum import Enum
 
+from .imputation_schemas import ImputationResult, SearchSummary, QualityMetrics
+
 
 class AnalysisStrategy(str, Enum):
     """Supported financial analysis strategies."""
@@ -61,27 +63,6 @@ class MetricComputationOutput(BaseModel):
     data_sources: Dict[str, List[str]] = Field(default={})
 
 
-class ImputationResult(BaseModel):
-    """Result of imputing a single data field."""
-    field_name: str
-    imputed_value: Optional[Union[float, str]] = None
-    confidence: float = Field(description="Confidence in imputed value (0-1)")
-    sources: List[str] = Field(default=[], description="URLs of data sources")
-    alternative_values: List[Union[float, str]] = Field(default=[], description="Alternative values found")
-    validation_notes: Optional[str] = Field(default=None)
-    extraction_method: Optional[str] = Field(default=None)
-
-
-class SearchSummary(BaseModel):
-    """Summary of web search execution for a field."""
-    field_name: str
-    queries_executed: int
-    sources_found: int
-    extraction_success: bool
-    search_duration_ms: Optional[int] = None
-    errors: List[str] = Field(default=[])
-
-
 class ImputationOutput(BaseModel):
     """Output schema for web data imputation tool."""
     ticker: str
@@ -89,6 +70,6 @@ class ImputationOutput(BaseModel):
     strategy_context: Optional[str]
     imputation_results: Dict[str, ImputationResult] = Field(default={})
     search_summary: Dict[str, SearchSummary] = Field(default={})
-    data_quality_assessment: DataQualityAssessment
+    data_quality_assessment: QualityMetrics
     overall_success_rate: float = Field(description="Percentage of fields successfully imputed")
     execution_time_ms: Optional[int] = None

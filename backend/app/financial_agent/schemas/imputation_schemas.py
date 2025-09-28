@@ -119,6 +119,27 @@ class ImputationSession(BaseModel):
     performance_metrics: Dict[str, Any] = Field(default={})
 
 
+class ImputationResult(BaseModel):
+    """Result of imputing a single data field."""
+    field_name: str
+    imputed_value: Optional[Union[float, str]] = None
+    confidence: float = Field(description="Confidence in imputed value (0-1)")
+    sources: List[str] = Field(default=[], description="URLs of data sources")
+    alternative_values: List[Union[float, str]] = Field(default=[], description="Alternative values found")
+    validation_notes: Optional[str] = Field(default=None)
+    extraction_method: Optional[str] = Field(default=None)
+
+
+class SearchSummary(BaseModel):
+    """Summary of web search execution for a field."""
+    field_name: str
+    queries_executed: int
+    sources_found: int
+    extraction_success: bool
+    search_duration_ms: Optional[int] = None
+    errors: List[str] = Field(default=[])
+
+
 class QualityMetrics(BaseModel):
     """Metrics for assessing imputation quality."""
     completeness: float = Field(description="Percentage of fields successfully imputed")

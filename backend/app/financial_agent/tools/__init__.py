@@ -8,12 +8,10 @@ This package contains tools for:
 - Strategy-specific analysis (Phil Town, High-Growth)
 """
 
-from .metric_computation import *
-from .data_imputation import *
+# Import only what we need to avoid circular imports
+from .registry import FinancialToolsRegistry, create_financial_tools_registry
 
 __all__ = [
-    'PhilTownAnalysisWithImputation',
-    'HighGrowthAnalysisWithImputation', 
-    'WebDataImputationTool',
-    'DataGapAnalyzer',
+    'FinancialToolsRegistry',
+    'create_financial_tools_registry',
 ]

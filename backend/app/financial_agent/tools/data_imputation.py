@@ -31,8 +31,8 @@ class WebDataImputationTool(BaseTool):
     Searches SEC filings, financial databases, and analyst reports.
     """
     
-    name = "impute_financial_data"
-    description = """
+    name: str = "impute_financial_data"
+    description: str = """
     Intelligently imputes missing financial data using web search.
     Searches SEC filings, financial databases, and analyst reports for missing 
     financial metrics required by investment analysis strategies.
@@ -40,10 +40,14 @@ class WebDataImputationTool(BaseTool):
     Input: ticker symbol, list of missing fields, strategy context
     Output: Imputed values with confidence scores, sources, and validation results
     """
-    args_schema = ImputationInput
+    args_schema: type = ImputationInput
+    tavily_tool: Optional[Any] = Field(default=None, exclude=True)
+    data_patterns: Optional[Any] = Field(default=None, exclude=True)
+    query_generator: Optional[Any] = Field(default=None, exclude=True)
+    credibility_ranker: Optional[Any] = Field(default=None, exclude=True)
     
-    def __init__(self, tavily_tool=None):
-        super().__init__()
+    def __init__(self, tavily_tool=None, **kwargs):
+        super().__init__(**kwargs)
         self.tavily_tool = tavily_tool
         self.data_patterns = FinancialDataPatterns()
         self.query_generator = SearchQueryGenerator()
@@ -66,7 +70,14 @@ class WebDataImputationTool(BaseTool):
             strategy_context=strategy_context,
             imputation_results={},
             search_summary={},
-            data_quality_assessment=None,
+            data_quality_assessment=QualityMetrics(
+                completeness=0.0,
+                accuracy=0.0,
+                reliability=0.0,
+                timeliness=0.8,
+                consistency=0.0,
+                overall_quality=0.0
+            ),
             overall_success_rate=0.0
         )
         
