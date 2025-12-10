@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { MainNav } from "./components/MainNav";
-import ChatSidebar from "./components/ChatSidebar";
 import { ChatContextProvider } from "./context/ChatContext";
+import { AuthProvider } from "./context/AuthContext";
+import ChatSidebar from "./components/ChatSidebar";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Fundamint",
-  description: "Analyze stock fundamentals with AI-enhanced insights.",
+  title: "Fundamint - AI Stock Analysis",
+  description: "Deep fundamental analysis powered by AI",
 };
 
 export default function RootLayout({
@@ -16,20 +20,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
-        <ChatContextProvider>
-          <div className="border-b">
-            <div className="flex h-16 items-center px-4">
-              <MainNav />
-            </div>
-          </div>
-          <div className="grid grid-cols-[3fr_1fr] h-[calc(100vh-4rem)]">
-            <main className="overflow-y-auto p-4">{children}</main>
-            <aside className="h-full">
+      <body className={inter.className}>
+        <AuthProvider>
+          <ChatContextProvider>
+            <div className="flex h-screen overflow-hidden">
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <MainNav />
+                <div className="flex-1 overflow-auto">
+                  {children}
+                </div>
+              </div>
               <ChatSidebar />
-            </aside>
-          </div>
-        </ChatContextProvider>
+            </div>
+          </ChatContextProvider>
+        </AuthProvider>
       </body>
     </html>
   );

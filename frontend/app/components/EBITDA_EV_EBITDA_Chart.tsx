@@ -22,10 +22,10 @@ export function EBITDA_EV_EBITDA_Chart({ ticker }: { ticker: string }) {
         try {
           setLoading(true);
           const [financialsRes, historyRes, balanceSheetRes, profileRes] = await Promise.all([
-            fetch(`http://localhost:8000/api/stock/${ticker}/financials`),
-            fetch(`http://localhost:8000/api/stock/${ticker}/price-history?period=10y`),
-            fetch(`http://localhost:8000/api/stock/${ticker}/balance-sheet`),
-            fetch(`http://localhost:8000/api/stock/${ticker}/profile`)
+            fetch(`http://localhost:8100/api/stock/${ticker}/financials`),
+            fetch(`http://localhost:8100/api/stock/${ticker}/price-history?period=10y`),
+            fetch(`http://localhost:8100/api/stock/${ticker}/balance-sheet`),
+            fetch(`http://localhost:8100/api/stock/${ticker}/profile`)
           ]);
 
           if (!financialsRes.ok || !historyRes.ok || !balanceSheetRes.ok || !profileRes.ok) {

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useChatContext } from '@/app/context/ChatContext';
 
 const ChatSidebar = () => {
-  const { ticker } = useChatContext();
+  const { ticker, setActiveTab } = useChatContext();
   const [messages, setMessages] = useState<{ sender: string; text: string }[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,7 +30,7 @@ const ChatSidebar = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/chat', {
+      const response = await fetch('http://localhost:8100/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -45,7 +45,20 @@ const ChatSidebar = () => {
       }
 
       const data = await response.json();
-      setMessages([...newMessages, { sender: 'bot', text: data.message }]);
+      let botMessage = data.message;
+
+      // Parse for tab switching commands [SWITCH_TAB: tab_name]
+      const tabSwitchMatch = botMessage.match(/\[SWITCH_TAB:\s*([^\]]+)\]/);
+      if (tabSwitchMatch) {
+        const targetTab = tabSwitchMatch[1].trim();
+        // Remove the command from the displayed message
+        botMessage = botMessage.replace(/\[SWITCH_TAB:\s*([^\]]+)\]/, '').trim();
+
+        // Switch to the tab
+        setActiveTab(targetTab);
+      }
+
+      setMessages([...newMessages, { sender: 'bot', text: botMessage }]);
     } catch (error) {
       console.error("Chat API error:", error);
       setMessages([...newMessages, { sender: 'bot', text: 'Sorry, I encountered an error.' }]);
@@ -55,7 +68,7 @@ const ChatSidebar = () => {
   };
 
   return (
-    <div className="relative h-full border-l bg-gray-50 dark:bg-gray-900">
+    <div className="relative h-full w-80 border-l bg-gray-50 dark:bg-gray-900 hidden md:block">
       <div className="absolute top-0 left-0 right-0 bottom-20 p-4 overflow-y-auto">
         {messages.map((msg, index) => (
           <div key={index} className={`my-2 ${msg.sender === 'user' ? 'text-right' : 'text-left'}`}>

@@ -1,29 +1,38 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
+import Link from "next/link";
+import { useAuth } from "@/app/context/AuthContext";
+import { Button } from "@/components/ui/button";
 
 export function MainNav() {
-  const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   return (
-    <div className="mr-4 hidden md:flex">
-      <Link href="/" className="mr-6 flex items-center space-x-2">
-        <span className="hidden font-bold sm:inline-block">Fundamint</span>
-      </Link>
-      <nav className="flex items-center space-x-6 text-sm font-medium">
-        <Link
-          href="/"
-          className={cn(
-            "transition-colors hover:text-primary",
-            pathname === "/" ? "text-foreground" : "text-foreground/60"
-          )}
-        >
-          Home
+    <nav className="border-b bg-white p-4">
+      <div className="container mx-auto flex items-center justify-between">
+        <Link href="/" className="text-2xl font-bold text-blue-600">
+          Fundamint
         </Link>
-        {/* Add more navigation links here if needed */}
-      </nav>
-    </div>
+        <div className="flex items-center gap-4">
+          <Link href="/" className="text-gray-600 hover:text-blue-600">
+            Search
+          </Link>
+          {user ? (
+            <>
+              <span className="text-sm text-gray-600">
+                Hi, {user.name} {user.isGuest && "(Guest)"}
+              </span>
+              <Button variant="ghost" onClick={logout}>
+                Logout
+              </Button>
+            </>
+          ) : (
+            <Link href="/login">
+              <Button variant="outline">Login</Button>
+            </Link>
+          )}
+        </div>
+      </div>
+    </nav>
   );
 }

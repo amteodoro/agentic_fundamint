@@ -22,8 +22,8 @@ export function DebtCoverageChart({ ticker }: { ticker: string }) {
         try {
           setLoading(true);
           const [balanceSheetRes, financialsRes] = await Promise.all([
-            fetch(`http://localhost:8000/api/stock/${ticker}/balance-sheet`),
-            fetch(`http://localhost:8000/api/stock/${ticker}/financials`)
+            fetch(`http://localhost:8100/api/stock/${ticker}/balance-sheet`),
+            fetch(`http://localhost:8100/api/stock/${ticker}/financials`)
           ]);
 
           if (!balanceSheetRes.ok || !financialsRes.ok) {

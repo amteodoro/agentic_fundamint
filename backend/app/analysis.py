@@ -71,7 +71,7 @@ def calculate_roic_phil_town(financials, balance_sheet, years_to_consider=YEARS_
             current_tax_rate = tax_provision / income_before_tax
             if 0 <= current_tax_rate <= 0.60: tax_rate = current_tax_rate
         nopat = ebit * (1 - tax_rate)
-        total_equity = get_safe_value(year_balance_sheet, 'Total Stockholder Equity', is_column_data=True)
+        total_equity = get_safe_value(year_balance_sheet, 'Stockholders Equity', is_column_data=True)
         long_term_debt = get_safe_value(year_balance_sheet, 'Long Term Debt', is_column_data=True)
         if long_term_debt is None:
             total_debt = get_safe_value(year_balance_sheet, 'Total Debt', is_column_data=True)
@@ -99,7 +99,7 @@ def get_growth_rates_phil_town(stock_data, years_to_consider=YEARS_OF_DATA):
     growth_rates['eps_cagr'] = calculate_cagr(eps_series, years_to_consider)
     bvps_series = None
     if not balance_sheet.empty and not financials.empty:
-        equity = get_safe_value(balance_sheet, 'Total Stockholder Equity', is_column_data=False)
+        equity = get_safe_value(balance_sheet, 'Stockholders Equity', is_column_data=False)
         shares = None
         if 'Diluted Average Shares' in financials.index: shares = get_safe_value(financials, 'Diluted Average Shares', is_column_data=False)
         elif 'Basic Average Shares' in financials.index: shares = get_safe_value(financials, 'Basic Average Shares', is_column_data=False)
@@ -248,7 +248,7 @@ def analyze_high_growth_quality_strategy(stock_data, avg_roic_from_pt):
         if isinstance(net_income_series_for_roe, pd.Series) and not net_income_series_for_roe.empty:
             numeric_ni_series = pd.to_numeric(net_income_series_for_roe, errors='coerce').dropna()
             net_income_latest_val = numeric_ni_series.iloc[-1] if not numeric_ni_series.empty else None
-            equity_latest = get_safe_value(balance_sheet.iloc[:,0], 'Total Stockholder Equity', True)
+            equity_latest = get_safe_value(balance_sheet.iloc[:,0], 'Stockholders Equity', True)
             if isinstance(net_income_latest_val,(int,float)) and isinstance(equity_latest,(int,float)) and equity_latest != 0:
                 latest_roe = net_income_latest_val / equity_latest
     analysis.update({'latest_roe': latest_roe, 'avg_roic': avg_roic_from_pt, 'insider_ownership_hg': get_safe_value(info, 'heldPercentInsiders')})

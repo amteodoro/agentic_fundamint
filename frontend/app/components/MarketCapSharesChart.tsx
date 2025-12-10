@@ -22,9 +22,9 @@ export function MarketCapSharesChart({ ticker }: { ticker: string }) {
         try {
           setLoading(true);
           const [historyRes, financialsRes, profileRes] = await Promise.all([
-            fetch(`http://localhost:8000/api/stock/${ticker}/price-history?period=10y`),
-            fetch(`http://localhost:8000/api/stock/${ticker}/financials`),
-            fetch(`http://localhost:8000/api/stock/${ticker}/profile`)
+            fetch(`http://localhost:8100/api/stock/${ticker}/price-history?period=10y`),
+            fetch(`http://localhost:8100/api/stock/${ticker}/financials`),
+            fetch(`http://localhost:8100/api/stock/${ticker}/profile`)
           ]);
 
           if (!historyRes.ok || !financialsRes.ok || !profileRes.ok) {

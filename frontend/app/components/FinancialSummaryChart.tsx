@@ -23,7 +23,7 @@ export function FinancialSummaryChart({ ticker }: { ticker: string }) {
       const fetchData = async () => {
         try {
           setLoading(true);
-          const response = await fetch(`http://localhost:8000/api/stock/${ticker}/financials`);
+          const response = await fetch(`http://localhost:8100/api/stock/${ticker}/financials`);
           if (!response.ok) {
             throw new Error('Failed to fetch financial summary.');
           }

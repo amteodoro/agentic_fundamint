@@ -59,7 +59,32 @@ async def chat(
     messages = []
     if request.context and request.context.get('ticker'):
         ticker = request.context['ticker']
-        messages.append(SystemMessage(content=f"The user is currently viewing information for the stock with the ticker symbol: {ticker}. All questions should be considered in this context unless specified otherwise."))
+        system_content = f"""The user is currently viewing information for the stock with the ticker symbol: {ticker}. 
+All questions should be considered in this context unless specified otherwise.
+
+IMPORTANT - UI CONTROL CAPABILITIES:
+You can control the user interface by including special commands in your response. When you believe the user should see specific information displayed on a particular tab, include the following tag:
+
+[SWITCH_TAB: tab_name]
+
+Available tabs:
+- summary: Overview and key metrics
+- price-target: Price Target Projection (future price calculator with configurable parameters)
+- phil-town: Sticker Price (Phil Town Rule #1 Analysis)
+- high-growth: High-Growth Quality Strategy Analysis  
+- competitors: Competitor Comparison
+- deep-dive: Deep Dive Investment Analysis (15 key questions)
+- charts: All financial charts (Price, Revenue, Margins, EBITDA, etc.)
+- financials: Financial Statements Tables
+
+Example usage:
+- If user asks "What's the target price?", respond with: "I'll show you the price projection calculator. [SWITCH_TAB: price-target] ..."
+- If user asks "Show me the debt coverage chart", respond with: "I'll show you the debt coverage information. [SWITCH_TAB: charts] Looking at the debt coverage data..."
+- If user asks "What's the sticker price?", respond with: "Let me show you the Phil Town analysis. [SWITCH_TAB: phil-town] ..."
+- If user asks about competitors, use: "[SWITCH_TAB: competitors]"
+
+The [SWITCH_TAB: ...] command will be automatically removed from what the user sees, and the UI will immediately switch to that tab."""
+        messages.append(SystemMessage(content=system_content))
     
     messages.append(HumanMessage(content=request.message))
 

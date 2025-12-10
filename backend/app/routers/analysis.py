@@ -1,103 +1,120 @@
-from fastapi import APIRouter, HTTPException
-import yfinance as yf
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
-from .. import analysis
+from app.dependencies import get_agent_dependencies, AgentDependencies
+from app.financial_agent.schemas.tool_schemas import MetricComputationOutput
 
 router = APIRouter()
 
-class PhilTownAnalysis(BaseModel):
-    moat: Dict
-    management: Dict
-    mos: Dict
-    growth_rates: Dict
-
-@router.get("/analysis/{ticker}/phil-town", response_model=PhilTownAnalysis)
-async def get_phil_town_analysis(ticker: str):
-    stock = yf.Ticker(ticker)
-    if not stock.info or stock.info.get('longName') is None:
-        print(f"[Backend] Ticker {ticker} not found for Phil Town analysis.")
-        raise HTTPException(status_code=404, detail=f"Ticker '{ticker}' not found.")
-
-    financials = stock.financials
-    balance_sheet = stock.balance_sheet
-    cash_flow = stock.cashflow
-
-    print(f"[Backend] Fetching data for Phil Town analysis for {ticker}...")
-    stock_data = {
-        "info": stock.info,
-        "financials": financials,
-        "balance_sheet": balance_sheet,
-        "cash_flow": cash_flow
-    }
-
+@router.get("/analysis/{ticker}/phil-town", response_model=MetricComputationOutput)
+async def get_phil_town_analysis(
+    ticker: str,
+    enable_web_search: bool = True,
+    agent_deps: AgentDependencies = Depends(get_agent_dependencies)
+):
+    tool = agent_deps.tools_map.get("phil_town_analysis_complete")
+    if not tool:
+        raise HTTPException(status_code=500, detail="Phil Town Analysis tool not found")
+    
     try:
-        avg_roic, roic_annual = analysis.calculate_roic_phil_town(financials, balance_sheet)
-        print(f"[Backend] ROIC calculated: {avg_roic}")
-        growth_rates = analysis.get_growth_rates_phil_town(stock_data)
-        print(f"[Backend] Growth rates calculated: {growth_rates}")
-        management_metrics = analysis.calculate_management_metrics_phil_town(stock_data)
-        print(f"[Backend] Management metrics calculated: {management_metrics}")
-        mos_data = analysis.calculate_margin_of_safety_phil_town(stock_data, growth_rates)
-        print(f"[Backend] MOS data calculated: {mos_data}")
-
-        return {
-            "moat": {"avg_roic": avg_roic, "roic_annual": roic_annual},
-            "management": management_metrics,
-            "mos": mos_data,
-            "growth_rates": growth_rates
-        }
+        # The tool expects a dictionary input matching MetricComputationInput
+        result = await tool.ainvoke({
+            "ticker": ticker,
+            "strategy": "phil_town",
+            "enable_web_search": enable_web_search
+        })
+        
+        return result
     except Exception as e:
         print(f"[Backend] Error during Phil Town analysis for {ticker}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-class HighGrowthAnalysis(BaseModel):
-    sales_cagr_hg: Optional[float]
-    net_margins_historical: List[float]
-    net_margin_trend: str
-    current_net_margin: Optional[float]
-    current_psr: Optional[float]
-    current_per: Optional[float]
-    market_cap: Optional[float]
-    shares_outstanding: Optional[float]
-    ev_to_ebitda: Optional[float]
-    net_debt: Optional[float]
-    net_debt_to_ebitda: Optional[float]
-    latest_roe: Optional[float]
-    avg_roic: Optional[float]
-    insider_ownership_hg: Optional[float]
-    dividend_yield: Optional[float]
-    pays_dividends: bool
-
-@router.get("/analysis/{ticker}/high-growth", response_model=HighGrowthAnalysis)
-async def get_high_growth_analysis(ticker: str):
-    stock = yf.Ticker(ticker)
-    if not stock.info or stock.info.get('longName') is None:
-        print(f"[Backend] Ticker {ticker} not found for High-Growth analysis.")
-        raise HTTPException(status_code=404, detail=f"Ticker '{ticker}' not found.")
-
-    financials = stock.financials
-    balance_sheet = stock.balance_sheet
-    cash_flow = stock.cashflow
-    dividends = stock.dividends
-
-    print(f"[Backend] Fetching data for High-Growth analysis for {ticker}...")
-    stock_data = {
-        "info": stock.info,
-        "financials": financials,
-        "balance_sheet": balance_sheet,
-        "cash_flow": cash_flow,
-        "dividends": dividends
-    }
-
+@router.get("/analysis/{ticker}/high-growth", response_model=MetricComputationOutput)
+async def get_high_growth_analysis(
+    ticker: str,
+    enable_web_search: bool = True,
+    agent_deps: AgentDependencies = Depends(get_agent_dependencies)
+):
+    tool = agent_deps.tools_map.get("high_growth_analysis_complete")
+    if not tool:
+        raise HTTPException(status_code=500, detail="High Growth Analysis tool not found")
+    
     try:
-        avg_roic, _ = analysis.calculate_roic_phil_town(financials, balance_sheet)
-        print(f"[Backend] Avg ROIC for High-Growth analysis: {avg_roic}")
-        hg_analysis = analysis.analyze_high_growth_quality_strategy(stock_data, avg_roic)
-        print(f"[Backend] High-Growth analysis results: {hg_analysis}")
-
-        return hg_analysis
+        result = await tool.ainvoke({
+            "ticker": ticker,
+            "strategy": "high_growth",
+            "enable_web_search": enable_web_search
+        })
+        
+        return result
     except Exception as e:
         print(f"[Backend] Error during High-Growth analysis for {ticker}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/analysis/{ticker}/competitors")
+async def get_competitor_analysis(
+    ticker: str,
+    agent_deps: AgentDependencies = Depends(get_agent_dependencies)
+):
+    tool = agent_deps.tools_map.get("competitor_analysis")
+    if not tool:
+        raise HTTPException(status_code=500, detail="Competitor Analysis tool not found")
+    
+    try:
+        # The tool expects a string input or a dictionary depending on implementation
+        # BaseTool.ainvoke usually handles dicts best if arguments are named
+        result = await tool.ainvoke({
+            "ticker": ticker
+        })
+        
+        return result
+    except Exception as e:
+        print(f"[Backend] Error during Competitor analysis for {ticker}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/analysis/{ticker}/deep-dive")
+async def get_deep_dive_analysis(
+    ticker: str,
+    agent_deps: AgentDependencies = Depends(get_agent_dependencies)
+):
+    tool = agent_deps.tools_map.get("deep_dive_analysis")
+    if not tool:
+        raise HTTPException(status_code=500, detail="Deep Dive Analysis tool not found")
+    
+    try:
+        result = await tool.ainvoke({
+            "ticker": ticker
+        })
+        
+        return result
+    except Exception as e:
+        print(f"[Backend] Error during Deep Dive analysis for {ticker}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/analysis/{ticker}/price-projection")
+async def get_price_projection_analysis(
+    ticker: str,
+    agent_deps: AgentDependencies = Depends(get_agent_dependencies)
+):
+    """
+    Get price projection data with configurable defaults for the 4-variable model:
+    - Revenue Growth Rate
+    - Net Profit Margin
+    - Target P/E Ratio
+    - Share Count Change
+    """
+    tool = agent_deps.tools_map.get("price_projection_analysis")
+    if not tool:
+        raise HTTPException(status_code=500, detail="Price Projection tool not found")
+    
+    try:
+        result = await tool.ainvoke({
+            "ticker": ticker
+        })
+        
+        return result
+    except Exception as e:
+        print(f"[Backend] Error during Price Projection analysis for {ticker}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
