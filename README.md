@@ -26,5 +26,5 @@ docker-compose up --build
 
 This will start the frontend and backend services.
 
--   Frontend: [http://localhost:3000](http://localhost:3000)
--   Backend: [http://localhost:8000](http://localhost:8000)
+-   Frontend: [http://localhost:3100](http://localhost:3100)
+-   Backend: [http://localhost:8100](http://localhost:8100)
