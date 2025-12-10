@@ -93,6 +93,68 @@ class FinancialDataPatterns:
             r'Market\s+Capitalization[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
             r'Mkt\s+Cap[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
         ],
+        'total_stockholder_equity': [
+            r'Total\s+Stockholder[s\']?\s+Equity[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Shareholders?\s+Equity[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Stockholders?\s+Equity[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Total\s+Equity[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Book\s+Value[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Net\s+Assets[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+        ],
+        'diluted_eps': [
+            r'Diluted\s+EPS[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)',
+            r'Diluted\s+Earnings\s+Per\s+Share[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)',
+            r'EPS\s+\(Diluted\)[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)',
+            r'Earnings\s+Per\s+Share[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)',
+            r'Basic\s+EPS[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)',
+        ],
+        'total_revenue': [
+            r'Total\s+Revenue[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Revenue[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Net\s+Sales[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Sales[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Total\s+Net\s+Revenue[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+        ],
+        'long_term_debt': [
+            r'Long[- ]Term\s+Debt[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'LT\s+Debt[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Non[- ]Current\s+Debt[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Long[- ]term\s+Borrowings[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+        ],
+        'operating_cash_flow': [
+            r'Operating\s+Cash\s+Flow[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Cash\s+Flow\s+from\s+Operations[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'CFO[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Net\s+Cash\s+from\s+Operating[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+        ],
+        'capital_expenditure': [
+            r'Capital\s+Expenditure[s]?[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'CapEx[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Capital\s+Spending[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'PP&E\s+Purchases[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+        ],
+        'net_income': [
+            r'Net\s+Income[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Net\s+Profit[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Net\s+Earnings[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Profit\s+After\s+Tax[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+        ],
+        'ebitda': [
+            r'EBITDA[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Earnings\s+Before\s+Interest,?\s+Taxes,?\s+Depreciation,?\s+and\s+Amortization[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Adjusted\s+EBITDA[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+        ],
+        'total_debt': [
+            r'Total\s+Debt[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Gross\s+Debt[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Total\s+Borrowings[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+        ],
+        'cash_and_cash_equivalents': [
+            r'Cash\s+and\s+Cash\s+Equivalents[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Cash\s+&\s+Equivalents[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Cash\s+Position[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+            r'Total\s+Cash[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)[BMK]?',
+        ],
     }
     
     # Multipliers for financial shorthand notation

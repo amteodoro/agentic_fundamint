@@ -14,117 +14,118 @@ interface SummaryMetric {
 }
 
 const transformDataForSummaryTable = (hgAnalysisData: any, criteria: any[]): SummaryMetric[] => {
-    if (!hgAnalysisData || !criteria) return [];
+  if (!hgAnalysisData || !criteria) return [];
 
-    const getMetricAssessment = (metricName: string, value: any, hgData: any) => {
-        const good_color = "#D4EDDA";
-        const neutral_color = "#FFF3CD";
-        const warning_color = "#F8D7DA";
-        const default_color = "#FFFFFF";
+  const getMetricAssessment = (metricName: string, value: any, hgData: any) => {
+    const good_color = "#D4EDDA";
+    const neutral_color = "#FFF3CD";
+    const warning_color = "#F8D7DA";
+    const default_color = "#FFFFFF";
 
-        if (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) {
-            return { assessment: "N/A", color: default_color };
-        }
+    if (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) {
+      return { assessment: "N/A", color: default_color };
+    }
 
-        switch (metricName) {
-            case "Sales Growth":
-                if (value > 0.15) return { assessment: "Good", color: good_color };
-                if (value >= 0.05) return { assessment: "Neutral", color: neutral_color };
-                return { assessment: "Warning", color: warning_color };
-            case "Net Margin":
-                if (value > 0.10) return { assessment: "Good", color: good_color };
-                if (value >= 0.05) return { assessment: "Neutral", color: neutral_color };
-                return { assessment: "Warning", color: warning_color };
-            case "EV/EBITDA":
-                if (value < 5) return { assessment: "Good", color: good_color };
-                if (value <= 20) return { assessment: "Neutral", color: neutral_color };
-                return { assessment: "Warning", color: warning_color };
-            case "Net Debt / EBITDA":
-                if (hgData.net_debt < 0) return { assessment: "Good (Net Cash)", color: good_color };
-                if (value < 3) return { assessment: "Good", color: good_color };
-                return { assessment: "Warning", color: warning_color };
-            case "ROE":
-                if (value > 0.20) return { assessment: "Good", color: good_color };
-                if (value >= 0.15) return { assessment: "Neutral", color: neutral_color };
-                return { assessment: "Warning", color: warning_color };
-            case "PER":
-                if (value > 0 && value < 10) return { assessment: "Good", color: good_color };
-                if (value <= 20) return { assessment: "Neutral", color: neutral_color };
-                return { assessment: "Warning", color: warning_color };
-            case "PSR":
-                if (value < 1) return { assessment: "Good", color: good_color };
-                if (value <= 10) return { assessment: "Neutral", color: neutral_color };
-                return { assessment: "Warning", color: warning_color };
-            case "Insider Ownership":
-                if (value > 0.10) return { assessment: "Good (Significant)", color: good_color };
-                return { assessment: "Warning (Fragmented/Low)", color: warning_color };
-            case "Dividends":
-                return value ? { assessment: "Good", color: good_color } : { assessment: "Warning", color: warning_color };
-            default:
-                return { assessment: "N/A", color: default_color };
-        }
+    switch (metricName) {
+      case "Sales Growth":
+        if (value > 0.15) return { assessment: "Good", color: good_color };
+        if (value >= 0.05) return { assessment: "Neutral", color: neutral_color };
+        return { assessment: "Warning", color: warning_color };
+      case "Net Margin":
+        if (value > 0.10) return { assessment: "Good", color: good_color };
+        if (value >= 0.05) return { assessment: "Neutral", color: neutral_color };
+        return { assessment: "Warning", color: warning_color };
+      case "EV/EBITDA":
+        if (value < 5) return { assessment: "Good", color: good_color };
+        if (value <= 20) return { assessment: "Neutral", color: neutral_color };
+        return { assessment: "Warning", color: warning_color };
+      case "Net Debt / EBITDA":
+        if (hgData.net_debt < 0) return { assessment: "Good (Net Cash)", color: good_color };
+        if (value < 3) return { assessment: "Good", color: good_color };
+        return { assessment: "Warning", color: warning_color };
+      case "ROE":
+        if (value > 0.20) return { assessment: "Good", color: good_color };
+        if (value >= 0.15) return { assessment: "Neutral", color: neutral_color };
+        return { assessment: "Warning", color: warning_color };
+      case "PER":
+        if (value > 0 && value < 10) return { assessment: "Good", color: good_color };
+        if (value <= 20) return { assessment: "Neutral", color: neutral_color };
+        return { assessment: "Warning", color: warning_color };
+      case "PSR":
+        if (value < 1) return { assessment: "Good", color: good_color };
+        if (value <= 10) return { assessment: "Neutral", color: neutral_color };
+        return { assessment: "Warning", color: warning_color };
+      case "Insider Ownership":
+        if (value > 0.10) return { assessment: "Good (Significant)", color: good_color };
+        return { assessment: "Warning (Fragmented/Low)", color: warning_color };
+      case "Dividends":
+        return value ? { assessment: "Good", color: good_color } : { assessment: "Warning", color: warning_color };
+      default:
+        return { assessment: "N/A", color: default_color };
+    }
+  };
+
+  const rawMetrics: { [key: string]: any } = {
+    "Sales Growth": hgAnalysisData.final_metrics?.high_growth?.sales_growth?.value ?? hgAnalysisData.sales_cagr_hg,
+    "Net Margin": hgAnalysisData.final_metrics?.high_growth?.net_margin?.value ?? hgAnalysisData.current_net_margin,
+    "EV/EBITDA": hgAnalysisData.final_metrics?.high_growth?.ev_ebitda?.value ?? hgAnalysisData.ev_to_ebitda,
+    "Net Debt / EBITDA": hgAnalysisData.final_metrics?.high_growth?.debt_to_ebitda?.value ?? hgAnalysisData.net_debt_to_ebitda,
+    "ROE": hgAnalysisData.final_metrics?.high_growth?.roe?.value ?? hgAnalysisData.latest_roe,
+    "PER": hgAnalysisData.final_metrics?.high_growth?.per_ratio?.value ?? hgAnalysisData.current_per,
+    "PSR": hgAnalysisData.final_metrics?.high_growth?.psr_ratio?.value ?? hgAnalysisData.current_psr,
+    "Insider Ownership": hgAnalysisData.final_metrics?.high_growth?.insider_ownership?.value ?? hgAnalysisData.insider_ownership_hg,
+    "Dividends": hgAnalysisData.final_metrics?.high_growth?.pays_dividends ?? hgAnalysisData.pays_dividends,
+  };
+
+  const metricMap: { [key: string]: string } = {
+    "Sales Growth": "Sales Growth (Crescimento das Vendas)",
+    "Net Margin": "Net Margin (Margem Líquida)",
+    "EV/EBITDA": "EV/EBITDA",
+    "Net Debt / EBITDA": "Net Debt / EBITDA",
+    "ROE": "Operational Return on Equity (ROE)",
+    "PER": "Price to Earnings Ratio (PER)",
+    "PSR": "Price to Sales Ratio (PSR)",
+    "Insider Ownership": "Shareholder Structure (Estrutura Acionista)",
+    "Dividends": "Dividend Payments (Pagamento de Dividendos)"
+  };
+
+  const summaryMetrics: SummaryMetric[] = Object.keys(metricMap).map(simpleName => {
+    const value = rawMetrics[simpleName];
+    const { assessment, color } = getMetricAssessment(simpleName, value, hgAnalysisData);
+    // Match using the simple name (e.g., "Sales Growth") instead of the Portuguese version
+    const interpretation = criteria.find(c => c.criteria_name === simpleName)?.interpretation || "N/A";
+
+    let formattedValue: string | number | null;
+    if (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) {
+      formattedValue = "N/A";
+    } else if (["Sales Growth", "Net Margin", "ROE", "Insider Ownership"].includes(simpleName)) {
+      formattedValue = `${(value * 100).toFixed(2)}%`;
+    } else if (simpleName === "Dividends") {
+      formattedValue = value ? "Yes" : "No";
+    } else {
+      formattedValue = typeof value === 'number' ? value.toFixed(2) : value;
+    }
+
+    return {
+      criteria_name: simpleName,
+      interpretation,
+      value: formattedValue,
+      assessment,
+      color,
     };
+  });
 
-    const rawMetrics: { [key: string]: any } = {
-        "Sales Growth": hgAnalysisData.sales_cagr_hg,
-        "Net Margin": hgAnalysisData.current_net_margin,
-        "EV/EBITDA": hgAnalysisData.ev_to_ebitda,
-        "Net Debt / EBITDA": hgAnalysisData.net_debt_to_ebitda,
-        "ROE": hgAnalysisData.latest_roe,
-        "PER": hgAnalysisData.current_per,
-        "PSR": hgAnalysisData.current_psr,
-        "Insider Ownership": hgAnalysisData.insider_ownership_hg,
-        "Dividends": hgAnalysisData.pays_dividends,
-    };
+  // Manually add qualitative metrics
+  const buybackInterpretation = criteria.find(c => c.criteria_name === "Share Buybacks")?.interpretation || "N/A";
+  summaryMetrics.push({
+    criteria_name: "Share Buybacks",
+    interpretation: buybackInterpretation,
+    value: "Manual Check",
+    assessment: "N/A",
+    color: "#FFFFFF",
+  });
 
-    const metricMap: { [key: string]: string } = {
-        "Sales Growth": "Sales Growth (Crescimento das Vendas)",
-        "Net Margin": "Net Margin (Margem Líquida)",
-        "EV/EBITDA": "EV/EBITDA",
-        "Net Debt / EBITDA": "Net Debt / EBITDA",
-        "ROE": "Operational Return on Equity (ROE)",
-        "PER": "Price to Earnings Ratio (PER)",
-        "PSR": "Price to Sales Ratio (PSR)",
-        "Insider Ownership": "Shareholder Structure (Estrutura Acionista)",
-        "Dividends": "Dividend Payments (Pagamento de Dividendos)"
-    };
-
-    const summaryMetrics: SummaryMetric[] = Object.keys(metricMap).map(simpleName => {
-        const value = rawMetrics[simpleName];
-        const { assessment, color } = getMetricAssessment(simpleName, value, hgAnalysisData);
-        const interpretation = criteria.find(c => c.criteria_name === metricMap[simpleName])?.interpretation || "N/A";
-        
-        let formattedValue: string | number | null;
-        if (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) {
-            formattedValue = "N/A";
-        } else if (["Sales Growth", "Net Margin", "ROE", "Insider Ownership"].includes(simpleName)) {
-            formattedValue = `${(value * 100).toFixed(2)}%`;
-        } else if (simpleName === "Dividends") {
-            formattedValue = value ? "Yes" : "No";
-        } else {
-            formattedValue = typeof value === 'number' ? value.toFixed(2) : value;
-        }
-
-        return {
-            criteria_name: simpleName,
-            interpretation,
-            value: formattedValue,
-            assessment,
-            color,
-        };
-    });
-
-    // Manually add qualitative metrics
-    const buybackInterpretation = criteria.find(c => c.criteria_name === "Share Buybacks (Compra de Ações Próprias)")?.interpretation || "N/A";
-    summaryMetrics.push({
-        criteria_name: "Share Buybacks",
-        interpretation: buybackInterpretation,
-        value: "Manual Check",
-        assessment: "N/A",
-        color: "#FFFFFF",
-    });
-
-    return summaryMetrics;
+  return summaryMetrics;
 };
 
 export function SummaryTable({ ticker }: { ticker: string }) {
@@ -138,14 +139,14 @@ export function SummaryTable({ ticker }: { ticker: string }) {
         try {
           setLoading(true);
           // This component needs the high-growth analysis data
-          const response = await fetch(`http://localhost:8000/api/analysis/${ticker}/high-growth`);
+          const response = await fetch(`http://localhost:8100/api/analysis/${ticker}/high-growth`);
           if (!response.ok) {
             throw new Error('Failed to fetch summary data.');
           }
           const hgAnalysisData = await response.json();
-          
+
           // The criteria data is static, so we can define it here or fetch it if it becomes dynamic
-          const criteriaResponse = await fetch('http://localhost:8000/api/criteria');
+          const criteriaResponse = await fetch('http://localhost:8100/api/criteria');
           const criteriaData = await criteriaResponse.json();
 
           const transformedData = transformDataForSummaryTable(hgAnalysisData, criteriaData);

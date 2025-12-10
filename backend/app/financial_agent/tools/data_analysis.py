@@ -29,7 +29,7 @@ class DataGapAnalyzer:
                     'impact': 'Cannot calculate ROIC without EBIT or components'
                 },
                 'total_stockholder_equity': {
-                    'sources': ['Total Stockholder Equity', 'Shareholders Equity'],
+                    'sources': ['Stockholders Equity', 'Common Stock Equity', 'Total Equity Gross Minority Interest'],
                     'fallbacks': [],
                     'description': 'Total shareholder equity',
                     'impact': 'Required for ROIC invested capital calculation'
@@ -91,13 +91,13 @@ class DataGapAnalyzer:
                     'impact': 'Required for sales growth analysis'
                 },
                 'net_income': {
-                    'sources': ['Net Income'],
+                    'sources': ['Net Income', 'Net Income Common Stockholders', 'Net Income Continuous Operations'],
                     'fallbacks': [],
                     'description': 'Net income',
                     'impact': 'Required for net margin calculation'
                 },
                 'total_stockholder_equity': {
-                    'sources': ['Total Stockholder Equity', 'Shareholders Equity'],
+                    'sources': ['Stockholders Equity', 'Common Stock Equity', 'Total Equity Gross Minority Interest'],
                     'fallbacks': [],
                     'description': 'Total shareholder equity',
                     'impact': 'Required for ROE calculation'
@@ -105,7 +105,7 @@ class DataGapAnalyzer:
             },
             'important': {
                 'ebitda': {
-                    'sources': ['ebitda'],
+                    'sources': ['EBITDA', 'ebitda', 'Normalized EBITDA'],
                     'fallbacks': [],
                     'description': 'EBITDA',
                     'impact': 'Required for EV/EBITDA and debt ratios'

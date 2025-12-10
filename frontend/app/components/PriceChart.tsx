@@ -20,7 +20,7 @@ export function PriceChart({ ticker }: { ticker: string }) {
       const fetchData = async () => {
         try {
           setLoading(true);
-          const response = await fetch(`http://localhost:8000/api/stock/${ticker}/price-history`);
+          const response = await fetch(`http://localhost:8100/api/stock/${ticker}/price-history`);
           if (!response.ok) {
             throw new Error('Failed to fetch price history.');
           }

@@ -29,7 +29,7 @@ export function StockSearchInput() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`http://localhost:8000/api/search?q=${debouncedSearchTerm}`);
+        const response = await fetch(`http://localhost:8100/api/search?q=${debouncedSearchTerm}`);
         if (!response.ok) {
           throw new Error('Failed to fetch search results.');
         }

@@ -612,7 +612,8 @@ class PhilTownAnalysisWithImputation(BaseTool):
         
         # Data quality note
         if gap_analysis.critical_missing:
-            summary_parts.append(f"Note: {len(gap_analysis.critical_missing)} critical fields required web imputation")
+            missing_fields = ", ".join(gap_analysis.critical_missing)
+            summary_parts.append(f"Note: {len(gap_analysis.critical_missing)} critical fields required web imputation ({missing_fields})")
         
         return ". ".join(summary_parts)
     
@@ -783,7 +784,8 @@ class HighGrowthAnalysisWithImputation(BaseTool):
         
         # Data quality note
         if gap_analysis.critical_missing:
-            summary_parts.append(f"Note: {len(gap_analysis.critical_missing)} critical fields required web imputation")
+            missing_fields = ", ".join(gap_analysis.critical_missing)
+            summary_parts.append(f"Note: {len(gap_analysis.critical_missing)} critical fields required web imputation ({missing_fields})")
         
         return ". ".join(summary_parts)
     

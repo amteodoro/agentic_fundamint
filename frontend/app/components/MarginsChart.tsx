@@ -23,7 +23,7 @@ export function MarginsChart({ ticker }: { ticker: string }) {
       const fetchData = async () => {
         try {
           setLoading(true);
-          const financialsRes = await fetch(`http://localhost:8000/api/stock/${ticker}/financials`);
+          const financialsRes = await fetch(`http://localhost:8100/api/stock/${ticker}/financials`);
           if (!financialsRes.ok) throw new Error('Failed to fetch financials for margins.');
           const financialsData = await financialsRes.json();
           

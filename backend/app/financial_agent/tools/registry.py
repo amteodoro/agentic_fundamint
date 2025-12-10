@@ -8,6 +8,9 @@ import logging
 
 from .metric_computation import PhilTownAnalysisWithImputation, HighGrowthAnalysisWithImputation
 from .data_imputation import WebDataImputationTool
+from .competitor_analysis import CompetitorAnalysisTool
+from .deep_dive import DeepDiveAnalysisTool
+from .price_projection import PriceProjectionTool
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +18,10 @@ logger = logging.getLogger(__name__)
 class FinancialToolsRegistry:
     """Registry for all financial analysis tools."""
     
-    def __init__(self, tavily_tool=None):
+    def __init__(self, tavily_tool=None, llm=None):
         """Initialize the registry with external tool dependencies."""
         self.tavily_tool = tavily_tool
+        self.llm = llm
         self._tools = {}
         self._initialize_tools()
     
@@ -39,6 +43,27 @@ class FinancialToolsRegistry:
             self._tools['impute_financial_data'] = WebDataImputationTool(
                 tavily_tool=self.tavily_tool
             )
+
+            # Initialize competitor analysis tool
+            if self.tavily_tool:
+                self._tools['competitor_analysis'] = CompetitorAnalysisTool(
+                    search_tool=self.tavily_tool,
+                    llm=self.llm
+                )
+            else:
+                logger.warning("Tavily tool not provided, skipping CompetitorAnalysisTool initialization")
+
+            # Initialize deep dive analysis tool
+            if self.llm:
+                self._tools['deep_dive_analysis'] = DeepDiveAnalysisTool(
+                    llm=self.llm,
+                    search_tool=self.tavily_tool
+                )
+            else:
+                logger.warning("LLM not provided, skipping DeepDiveAnalysisTool initialization")
+
+            # Initialize price projection tool
+            self._tools['price_projection_analysis'] = PriceProjectionTool()
             
             logger.info(f"Successfully initialized {len(self._tools)} financial analysis tools")
             
@@ -66,6 +91,8 @@ class FinancialToolsRegistry:
         category_map = {
             'analysis': ['phil_town_analysis_complete', 'high_growth_analysis_complete'],
             'imputation': ['impute_financial_data'],
+            'competitors': ['competitor_analysis'],
+            'projection': ['price_projection_analysis'],
             'all': list(self._tools.keys())
         }
         
@@ -77,6 +104,6 @@ class FinancialToolsRegistry:
         return {name: tool.description for name, tool in self._tools.items()}
 
 
-def create_financial_tools_registry(tavily_tool=None) -> FinancialToolsRegistry:
+def create_financial_tools_registry(tavily_tool=None, llm=None) -> FinancialToolsRegistry:
     """Factory function to create a financial tools registry."""
-    return FinancialToolsRegistry(tavily_tool=tavily_tool)
+    return FinancialToolsRegistry(tavily_tool=tavily_tool, llm=llm)

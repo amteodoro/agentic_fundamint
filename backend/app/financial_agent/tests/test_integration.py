@@ -173,28 +173,28 @@ if __name__ == "__main__":
     print("Running financial tools integration tests...")
     
     test_class.test_tools_registry_initialization()
-    print("✓ Tools registry initialization test passed")
+    print("[PASS] Tools registry initialization test passed")
     
     test_class.test_tool_categories()
-    print("✓ Tool categories test passed")
+    print("[PASS] Tool categories test passed")
     
     test_class.test_tool_descriptions()
-    print("✓ Tool descriptions test passed")
+    print("[PASS] Tool descriptions test passed")
     
     test_class.test_data_gap_analyzer()
-    print("✓ Data gap analyzer test passed")
+    print("[PASS] Data gap analyzer test passed")
     
     # Run async test
     async def run_async_tests():
         await test_class.test_imputation_tool_structure()
-        print("✓ Imputation tool structure test passed")
+        print("[PASS] Imputation tool structure test passed")
     
     asyncio.run(run_async_tests())
     
     test_class.test_metric_computation_tools_structure()
-    print("✓ Metric computation tools structure test passed")
+    print("[PASS] Metric computation tools structure test passed")
     
     test_class.test_analysis_strategies_enum()
-    print("✓ Analysis strategies enum test passed")
+    print("[PASS] Analysis strategies enum test passed")
     
-    print("\nAll integration tests passed! 🎉")
+    print("\n[SUCCESS] All integration tests passed!")

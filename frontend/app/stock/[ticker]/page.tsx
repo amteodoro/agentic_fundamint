@@ -15,6 +15,9 @@ import { NetIncomePERChart } from '@/app/components/NetIncomePERChart';
 import { PhilTownAnalysis } from '@/app/components/PhilTownAnalysis';
 import { PriceChart } from '@/app/components/PriceChart';
 import { RevenuePSRChart } from '@/app/components/RevenuePSRChart';
+import { CompetitorComparison } from '@/app/components/CompetitorComparison';
+import { DeepDiveAnalysis } from '@/app/components/DeepDiveAnalysis';
+import { PriceProjectionAnalysis } from '@/app/components/PriceProjectionAnalysis';
 import { SummaryTable } from '@/app/components/SummaryTable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useEffect, useState } from 'react';
@@ -32,7 +35,7 @@ interface ProfileData {
 
 export default function StockDetailPage({ params }: { params: { ticker: string } }) {
   const { ticker } = params;
-  const { setTicker } = useChatContext();
+  const { setTicker, activeTab, setActiveTab } = useChatContext();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,8 +51,8 @@ export default function StockDetailPage({ params }: { params: { ticker: string }
         try {
           setLoading(true);
           setError(null);
-          
-          const profileRes = await fetch(`http://localhost:8000/api/stock/${ticker}/profile`);
+
+          const profileRes = await fetch(`http://localhost:8100/api/stock/${ticker}/profile`);
           if (!profileRes.ok) throw new Error(`Failed to fetch profile for ${ticker}`);
           const profileData = await profileRes.json();
           setProfile(profileData);
@@ -83,50 +86,65 @@ export default function StockDetailPage({ params }: { params: { ticker: string }
         <p className="text-lg text-gray-600">{profile.sector} | {profile.industry}</p>
       </div>
 
-      <Tabs defaultValue="summary" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-5">
-          <TabsTrigger value="summary">📊 Summary</TabsTrigger>
-          <TabsTrigger value="phil-town">Phil Town</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4 md:grid-cols-8">
+          <TabsTrigger value="summary">Summary</TabsTrigger>
+          <TabsTrigger value="price-target">Price Target</TabsTrigger>
+          <TabsTrigger value="phil-town">Sticker Price</TabsTrigger>
           <TabsTrigger value="high-growth">High-Growth</TabsTrigger>
-          <TabsTrigger value="charts">📈 Charts</TabsTrigger>
+          <TabsTrigger value="competitors">Competitors</TabsTrigger>
+          <TabsTrigger value="deep-dive">Deep Dive</TabsTrigger>
+          <TabsTrigger value="charts">Charts</TabsTrigger>
           <TabsTrigger value="financials">Financials</TabsTrigger>
         </TabsList>
 
         <TabsContent value="summary" className="mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="md:col-span-2">
-                    <CompanyProfile ticker={ticker} />
-                </div>
-                <div>
-                    <KeyMetrics ticker={ticker} />
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="md:col-span-2">
+              <CompanyProfile ticker={ticker} />
             </div>
-            <div className="mt-8">
-              <SummaryTable ticker={ticker} />
+            <div>
+              <KeyMetrics ticker={ticker} />
             </div>
+          </div>
+          <div className="mt-8">
+            <SummaryTable ticker={ticker} />
+          </div>
         </TabsContent>
 
         <TabsContent value="phil-town" className="mt-4">
           <PhilTownAnalysis ticker={ticker} />
         </TabsContent>
 
+        <TabsContent value="price-target" className="mt-4">
+          <PriceProjectionAnalysis ticker={ticker} />
+        </TabsContent>
+
         <TabsContent value="high-growth" className="mt-4">
           <HighGrowthAnalysis ticker={ticker} />
         </TabsContent>
 
+        <TabsContent value="competitors" className="mt-4">
+          <CompetitorComparison ticker={ticker} />
+        </TabsContent>
+
+        <TabsContent value="deep-dive" className="mt-4">
+          <DeepDiveAnalysis ticker={ticker} />
+        </TabsContent>
+
         <TabsContent value="charts" className="mt-4">
-            <div className="grid grid-cols-1 gap-8">
-                <PriceChart ticker={ticker} />
-                <FinancialSummaryChart ticker={ticker} />
-                <MarginsChart ticker={ticker} />
-                <MarketCapSharesChart ticker={ticker} />
-                <EnterpriseValueChart ticker={ticker} />
-                <DividendsChart ticker={ticker} />
-                <DebtCoverageChart ticker={ticker} />
-                <RevenuePSRChart ticker={ticker} />
-                <EBITDA_EV_EBITDA_Chart ticker={ticker} />
-                <NetIncomePERChart ticker={ticker} />
-            </div>
+          <div className="grid grid-cols-1 gap-8">
+            <PriceChart ticker={ticker} />
+            <FinancialSummaryChart ticker={ticker} />
+            <MarginsChart ticker={ticker} />
+            <MarketCapSharesChart ticker={ticker} />
+            <EnterpriseValueChart ticker={ticker} />
+            <DividendsChart ticker={ticker} />
+            <DebtCoverageChart ticker={ticker} />
+            <RevenuePSRChart ticker={ticker} />
+            <EBITDA_EV_EBITDA_Chart ticker={ticker} />
+            <NetIncomePERChart ticker={ticker} />
+          </div>
         </TabsContent>
         <TabsContent value="financials" className="mt-4">
           <FinancialStatementsTable ticker={ticker} />

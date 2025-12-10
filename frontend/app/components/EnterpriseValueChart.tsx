@@ -21,9 +21,9 @@ export function EnterpriseValueChart({ ticker }: { ticker: string }) {
         try {
           setLoading(true);
           const [historyRes, balanceSheetRes, profileRes] = await Promise.all([
-            fetch(`http://localhost:8000/api/stock/${ticker}/price-history?period=10y`),
-            fetch(`http://localhost:8000/api/stock/${ticker}/balance-sheet`),
-            fetch(`http://localhost:8000/api/stock/${ticker}/profile`)
+            fetch(`http://localhost:8100/api/stock/${ticker}/price-history?period=10y`),
+            fetch(`http://localhost:8100/api/stock/${ticker}/balance-sheet`),
+            fetch(`http://localhost:8100/api/stock/${ticker}/profile`)
           ]);
 
           if (!historyRes.ok || !balanceSheetRes.ok || !profileRes.ok) {

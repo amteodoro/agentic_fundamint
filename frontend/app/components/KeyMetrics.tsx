@@ -18,7 +18,7 @@ export function KeyMetrics({ ticker }: { ticker: string }) {
       const fetchMetrics = async () => {
         try {
           setLoading(true);
-          const response = await fetch(`http://localhost:8000/api/stock/${ticker}/metrics`);
+          const response = await fetch(`http://localhost:8100/api/stock/${ticker}/metrics`);
           if (!response.ok) {
             throw new Error('Failed to fetch key metrics.');
           }

@@ -66,7 +66,7 @@ def get_agent_dependencies() -> AgentDependencies:
             break
     
     # Initialize financial analysis tools with Tavily integration
-    financial_tools_registry = create_financial_tools_registry(tavily_tool=tavily_tool)
+    financial_tools_registry = create_financial_tools_registry(tavily_tool=tavily_tool, llm=llm)
     financial_tools = financial_tools_registry.get_all_tools()
     logger.info(f"Initialized {len(financial_tools)} financial analysis tools")
     

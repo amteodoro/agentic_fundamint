@@ -20,7 +20,7 @@ export function DividendsChart({ ticker }: { ticker: string }) {
       const fetchData = async () => {
         try {
           setLoading(true);
-          const response = await fetch(`http://localhost:8000/api/stock/${ticker}/dividends`);
+          const response = await fetch(`http://localhost:8100/api/stock/${ticker}/dividends`);
           if (!response.ok) {
             throw new Error('Failed to fetch dividend history.');
           }

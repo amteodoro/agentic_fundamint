@@ -23,7 +23,7 @@ export function CompanyProfile({ ticker }: { ticker: string }) {
         try {
           setLoading(true);
           setError(null);
-          const response = await fetch(`http://localhost:8000/api/stock/${ticker}/profile`);
+          const response = await fetch(`http://localhost:8100/api/stock/${ticker}/profile`);
           if (!response.ok) {
             throw new Error('Failed to fetch company profile.');
           }
