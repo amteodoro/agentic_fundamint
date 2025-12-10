@@ -2,8 +2,14 @@ import asyncio
 import os
 from functools import lru_cache
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+from uuid import UUID
 import logging
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from langchain_core.tools import BaseTool
 from app.financial_agent.llm import ChatOpenRouter
@@ -13,6 +19,9 @@ from langchain_core.utils.function_calling import convert_to_openai_tool
 from app.financial_agent.tools.registry import create_financial_tools_registry
 
 logger = logging.getLogger(__name__)
+
+# OAuth2 scheme for token authentication
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
 class AgentDependencies(BaseModel):
@@ -89,3 +98,104 @@ def get_agent_dependencies() -> AgentDependencies:
         tools_for_llm=tools_for_llm,
         tools_map=tools_map,
     )
+
+
+async def get_current_user(
+    token: Optional[str] = Depends(oauth2_scheme),
+):
+    """
+    Dependency to get the current authenticated user from the JWT token.
+    
+    Args:
+        token: The JWT access token from the Authorization header
+        
+    Returns:
+        The authenticated User object
+        
+    Raises:
+        HTTPException: If the token is invalid or the user is not found
+    """
+    from app.database import get_db, AsyncSessionLocal
+    from app.auth.jwt import decode_token
+    from app.models.user import User
+    
+    if token is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Decode the token
+    token_data = decode_token(token)
+    
+    if token_data is None or token_data.user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    if token_data.token_type != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token type",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Get user from database
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(User).where(User.id == UUID(token_data.user_id))
+        )
+        user = result.scalar_one_or_none()
+    
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    return user
+
+
+async def get_current_active_user(
+    current_user = Depends(get_current_user),
+):
+    """
+    Dependency to get the current active user.
+    
+    Args:
+        current_user: The authenticated user from get_current_user
+        
+    Returns:
+        The active User object
+        
+    Raises:
+        HTTPException: If the user is inactive
+    """
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Inactive user",
+        )
+    return current_user
+
+
+async def get_optional_current_user(
+    token: Optional[str] = Depends(oauth2_scheme),
+):
+    """
+    Dependency to optionally get the current user.
+    Returns None if no token is provided or token is invalid.
+    Useful for endpoints that work with or without authentication.
+    """
+    if token is None:
+        return None
+    
+    try:
+        return await get_current_user(token)
+    except HTTPException:
+        return None
+

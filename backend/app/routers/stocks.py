@@ -63,6 +63,19 @@ class KeyMetricsResponse(BaseModel):
     """Pydantic model for the key metrics API response."""
     metrics: List[KeyMetric]
 
+
+class StockQuote(BaseModel):
+    """Pydantic model for a quick stock quote."""
+    ticker: str
+    price: float
+    change: float
+    changePercent: float
+    previousClose: Optional[float] = None
+    dayHigh: Optional[float] = None
+    dayLow: Optional[float] = None
+    volume: Optional[int] = None
+
+
 # Create a new router to organize stock-related endpoints
 router = APIRouter()
 
@@ -91,6 +104,43 @@ async def get_stock_profile(ticker: str):
         )
         
         return profile_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/stock/{ticker}/quote", response_model=StockQuote)
+async def get_stock_quote(ticker: str):
+    """
+    Retrieves current quote information for a given stock ticker.
+    Returns current price, change, and change percent.
+    """
+    stock_data = fetch_stock_data(ticker)
+    info = stock_data.get("info", {})
+
+    if not info or info.get('longName') is None:
+        raise HTTPException(status_code=404, detail=f"Ticker '{ticker}' not found or no quote available.")
+
+    try:
+        # Get price fields from yfinance info dict
+        current_price = info.get('currentPrice') or info.get('regularMarketPrice') or 0
+        previous_close = info.get('previousClose') or info.get('regularMarketPreviousClose') or 0
+        
+        # Calculate change and percent
+        change = current_price - previous_close if previous_close else 0
+        change_percent = (change / previous_close * 100) if previous_close else 0
+        
+        quote_data = StockQuote(
+            ticker=ticker.upper(),
+            price=round(current_price, 2),
+            change=round(change, 2),
+            changePercent=round(change_percent, 2),
+            previousClose=round(previous_close, 2) if previous_close else None,
+            dayHigh=info.get('dayHigh') or info.get('regularMarketDayHigh'),
+            dayLow=info.get('dayLow') or info.get('regularMarketDayLow'),
+            volume=info.get('volume') or info.get('regularMarketVolume')
+        )
+        
+        return quote_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

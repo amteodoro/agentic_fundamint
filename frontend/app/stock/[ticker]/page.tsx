@@ -19,6 +19,7 @@ import { CompetitorComparison } from '@/app/components/CompetitorComparison';
 import { DeepDiveAnalysis } from '@/app/components/DeepDiveAnalysis';
 import { PriceProjectionAnalysis } from '@/app/components/PriceProjectionAnalysis';
 import { SummaryTable } from '@/app/components/SummaryTable';
+import { AddToListButtons } from '@/app/components/AddToListButtons';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useEffect, useState } from 'react';
 import { useChatContext } from '@/app/context/ChatContext';
@@ -57,8 +58,8 @@ export default function StockDetailPage({ params }: { params: { ticker: string }
           const profileData = await profileRes.json();
           setProfile(profileData);
 
-        } catch (err: any) {
-          setError(err.message);
+        } catch (err: unknown) {
+          setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
           setLoading(false);
         }
@@ -82,8 +83,13 @@ export default function StockDetailPage({ params }: { params: { ticker: string }
   return (
     <div className="container mx-auto p-4 md:p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">{profile.longName} ({ticker.toUpperCase()})</h1>
-        <p className="text-lg text-gray-600">{profile.sector} | {profile.industry}</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">{profile.longName} ({ticker.toUpperCase()})</h1>
+            <p className="text-lg text-gray-600">{profile.sector} | {profile.industry}</p>
+          </div>
+          <AddToListButtons ticker={ticker.toUpperCase()} />
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

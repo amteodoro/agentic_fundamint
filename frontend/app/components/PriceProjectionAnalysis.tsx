@@ -28,7 +28,9 @@ interface HistoricalAverages {
     revenue_growth_pct: number | null;
     net_margin_pct: number | null;
     target_pe: number | null;
+    target_ps: number | null;
     share_change_pct: number | null;
+    projection_years: number | null;
 }
 
 interface NegativeAnalysis {
@@ -449,7 +451,7 @@ export function PriceProjectionAnalysis({ ticker }: { ticker: string }) {
                                 <Label className="text-sm font-medium">Projection Horizon</Label>
                                 <select
                                     value={years}
-                                    onChange={(e) => setYears(parseInt(e.target.value))}
+                                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setYears(parseInt(e.target.value))}
                                     className="border rounded px-3 py-1 text-sm"
                                 >
                                     {YEAR_OPTIONS.map((y) => (
