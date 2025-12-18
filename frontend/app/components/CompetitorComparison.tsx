@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useChatContext, getCurrencySymbol } from '@/app/context/ChatContext';
 
 interface CompetitorMetrics {
     ticker: string;
@@ -61,6 +62,9 @@ export function CompetitorComparison({ ticker }: { ticker: string }) {
     const [projections, setProjections] = useState<Record<string, CompetitorProjection>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const { currency, convertValue } = useChatContext();
+    const currencySymbol = getCurrencySymbol(currency);
 
     const PROJECTION_YEARS = 5;
 
@@ -161,16 +165,31 @@ export function CompetitorComparison({ ticker }: { ticker: string }) {
         if (num === undefined || num === null) return 'N/A';
         if (isPercent) return `${(num * 100).toFixed(2)}%`;
 
-        // Format large numbers (Market Cap)
-        if (num > 1e9) return `$${(num / 1e9).toFixed(2)}B`;
-        if (num > 1e6) return `$${(num / 1e6).toFixed(2)}M`;
-
         return num.toFixed(2);
+    };
+
+    const formatCurrencyValue = (num: number | undefined | null, isLarge: boolean = false) => {
+        if (num === undefined || num === null) return 'N/A';
+
+        // Convert to selected currency
+        const converted = convertValue(num, 'USD');
+        if (converted === null) return 'N/A';
+
+        // Format large numbers (Market Cap)
+        if (isLarge) {
+            if (Math.abs(converted) >= 1e12) return `${currencySymbol}${(converted / 1e12).toFixed(2)}T`;
+            if (Math.abs(converted) >= 1e9) return `${currencySymbol}${(converted / 1e9).toFixed(2)}B`;
+            if (Math.abs(converted) >= 1e6) return `${currencySymbol}${(converted / 1e6).toFixed(2)}M`;
+        }
+
+        return `${currencySymbol}${converted.toFixed(2)}`;
     };
 
     const formatPrice = (num: number | undefined | null) => {
         if (num === undefined || num === null) return 'N/A';
-        return `$${num.toFixed(2)}`;
+        const converted = convertValue(num, 'USD');
+        if (converted === null) return 'N/A';
+        return `${currencySymbol}${converted.toFixed(2)}`;
     };
 
     const formatPercent = (num: number | undefined | null) => {
@@ -181,7 +200,7 @@ export function CompetitorComparison({ ticker }: { ticker: string }) {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Competitor Comparison ({data.industry})</CardTitle>
+                <CardTitle>Competitor Comparison - {data.industry} ({currency})</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">
@@ -216,7 +235,7 @@ export function CompetitorComparison({ ticker }: { ticker: string }) {
                                             </Link>
                                         </TableCell>
                                         <TableCell>{comp.name}</TableCell>
-                                        <TableCell>{formatNumber(comp.market_cap)}</TableCell>
+                                        <TableCell>{formatCurrencyValue(comp.market_cap, true)}</TableCell>
                                         <TableCell>{formatNumber(comp.pe_ratio)}</TableCell>
                                         <TableCell>{formatNumber(comp.ps_ratio)}</TableCell>
                                         <TableCell>{formatNumber(comp.gross_margins, true)}</TableCell>
@@ -240,3 +259,4 @@ export function CompetitorComparison({ ticker }: { ticker: string }) {
         </Card>
     );
 }
+

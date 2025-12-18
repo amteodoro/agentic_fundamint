@@ -22,7 +22,8 @@ import { SummaryTable } from '@/app/components/SummaryTable';
 import { AddToListButtons } from '@/app/components/AddToListButtons';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useEffect, useState } from 'react';
-import { useChatContext } from '@/app/context/ChatContext';
+import { useChatContext, DataSourceType } from '@/app/context/ChatContext';
+import { DataSourceBadge } from '@/app/components/DataSourceBadge';
 
 // Define types for the data we'll fetch
 interface ProfileData {
@@ -32,11 +33,12 @@ interface ProfileData {
   longBusinessSummary?: string;
   website?: string;
   fullTimeEmployees?: number;
+  dataSource?: string;
 }
 
 export default function StockDetailPage({ params }: { params: { ticker: string } }) {
   const { ticker } = params;
-  const { setTicker, activeTab, setActiveTab } = useChatContext();
+  const { setTicker, activeTab, setActiveTab, dataSource, setDataSource } = useChatContext();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +55,7 @@ export default function StockDetailPage({ params }: { params: { ticker: string }
           setLoading(true);
           setError(null);
 
-          const profileRes = await fetch(`http://localhost:8100/api/stock/${ticker}/profile`);
+          const profileRes = await fetch(`http://localhost:8100/api/stock/${ticker}/profile?source=${dataSource}`);
           if (!profileRes.ok) throw new Error(`Failed to fetch profile for ${ticker}`);
           const profileData = await profileRes.json();
           setProfile(profileData);
@@ -66,7 +68,11 @@ export default function StockDetailPage({ params }: { params: { ticker: string }
       };
       fetchData();
     }
-  }, [ticker]);
+  }, [ticker, dataSource]);
+
+  const handleDataSourceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setDataSource(e.target.value as DataSourceType);
+  };
 
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen">Loading data for {ticker.toUpperCase()}...</div>;
@@ -85,10 +91,30 @@ export default function StockDetailPage({ params }: { params: { ticker: string }
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">{profile.longName} ({ticker.toUpperCase()})</h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-3xl font-bold">{profile.longName} ({ticker.toUpperCase()})</h1>
+              <DataSourceBadge source={profile.dataSource} />
+            </div>
             <p className="text-lg text-gray-600">{profile.sector} | {profile.industry}</p>
           </div>
-          <AddToListButtons ticker={ticker.toUpperCase()} />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            {/* Data Source Dropdown */}
+            <div className="flex items-center gap-2">
+              <label htmlFor="data-source-select" className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                Source:
+              </label>
+              <select
+                id="data-source-select"
+                value={dataSource}
+                onChange={handleDataSourceChange}
+                className="block rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-1.5 px-3 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="yfinance">Yahoo Finance</option>
+                <option value="fmp">Financial Modeling Prep</option>
+              </select>
+            </div>
+            <AddToListButtons ticker={ticker.toUpperCase()} />
+          </div>
         </div>
       </div>
 

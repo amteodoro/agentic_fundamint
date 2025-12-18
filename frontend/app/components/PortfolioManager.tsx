@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/app/context/AuthContext';
+import { useChatContext, getCurrencySymbol } from '@/app/context/ChatContext';
 import {
     getPortfolios,
     createPortfolio,
@@ -28,6 +29,9 @@ interface PortfolioManagerProps {
 
 export function PortfolioManager({ onSelectStock }: PortfolioManagerProps) {
     const { user, isAuthenticated } = useAuth();
+    const { currency, convertValue } = useChatContext();
+    const currencySymbol = getCurrencySymbol(currency);
+
     const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
     const [stockQuotes, setStockQuotes] = useState<Record<string, StockQuote>>({});
     const [loading, setLoading] = useState(true);
@@ -174,11 +178,12 @@ export function PortfolioManager({ onSelectStock }: PortfolioManagerProps) {
     };
 
     const formatCurrency = (value: number): string => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
+        const converted = convertValue(value, 'USD');
+        if (converted === null) return 'N/A';
+        return `${currencySymbol}${converted.toLocaleString(undefined, {
             minimumFractionDigits: 2,
-        }).format(value);
+            maximumFractionDigits: 2,
+        })}`;
     };
 
     const formatPercent = (value: number): string => {

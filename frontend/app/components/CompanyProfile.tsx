@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataSourceBadge } from './DataSourceBadge';
 
 interface ProfileData {
   longName?: string;
@@ -10,6 +11,7 @@ interface ProfileData {
   longBusinessSummary?: string;
   country?: string;
   website?: string;
+  dataSource?: string;
 }
 
 export function CompanyProfile({ ticker }: { ticker: string }) {
@@ -46,7 +48,10 @@ export function CompanyProfile({ ticker }: { ticker: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Company Profile</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Company Profile</CardTitle>
+          <DataSourceBadge source={profile.dataSource} />
+        </div>
       </CardHeader>
       <CardContent>
         <p className="text-lg font-semibold">{profile.longName}</p>

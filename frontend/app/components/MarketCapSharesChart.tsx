@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label } from 'recharts';
-import { formatNumber, CustomTooltip, COLORS } from '@/lib/chart-utils';
+import { formatNumber, createCurrencyFormatter, createCurrencyTooltip, COLORS } from '@/lib/chart-utils';
+import { useChatContext, getCurrencySymbol } from '@/app/context/ChatContext';
 
 interface ChartData {
   Date: string;
@@ -15,6 +16,30 @@ export function MarketCapSharesChart({ ticker }: { ticker: string }) {
   const [data, setData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { currency, exchangeRate } = useChatContext();
+  const currencySymbol = getCurrencySymbol(currency);
+  const rate = currency === 'EUR' ? exchangeRate : 1;
+
+  const marketCapFormatter = useMemo(() =>
+    createCurrencyFormatter(currencySymbol, rate, 0, true),
+    [currencySymbol, rate]
+  );
+
+  const CurrencyTooltip = useMemo(() =>
+    createCurrencyTooltip(currencySymbol, rate),
+    [currencySymbol, rate]
+  );
+
+  const convertedData = useMemo(() => {
+    if (currency === 'EUR' && exchangeRate) {
+      return data.map(d => ({
+        ...d,
+        "Market Cap": d["Market Cap"] ? d["Market Cap"] * exchangeRate : undefined
+      }));
+    }
+    return data;
+  }, [data, currency, exchangeRate]);
 
   useEffect(() => {
     if (ticker) {
@@ -63,7 +88,7 @@ export function MarketCapSharesChart({ ticker }: { ticker: string }) {
   if (loading) return (
     <Card>
       <CardHeader>
-        <CardTitle>Market Cap & Shares Outstanding</CardTitle>
+        <CardTitle>Market Cap & Shares ({currency})</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[300px] w-full flex items-center justify-center">
@@ -76,7 +101,7 @@ export function MarketCapSharesChart({ ticker }: { ticker: string }) {
   if (!data.length) return (
     <Card>
       <CardHeader>
-        <CardTitle>Market Cap & Shares Outstanding</CardTitle>
+        <CardTitle>Market Cap & Shares ({currency})</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[300px] w-full flex items-center justify-center">
@@ -89,20 +114,20 @@ export function MarketCapSharesChart({ ticker }: { ticker: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Market Cap & Shares Outstanding</CardTitle>
+        <CardTitle>Market Cap & Shares ({currency})</CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <ComposedChart data={data}>
+          <ComposedChart data={convertedData}>
             <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.5} />
             <XAxis dataKey="Date" />
-            <YAxis yAxisId="left" tickFormatter={(tick) => formatNumber(tick, 0)}>
-              <Label value="Market Cap" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
+            <YAxis yAxisId="left" tickFormatter={marketCapFormatter}>
+              <Label value={`Market Cap (${currency})`} angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
             </YAxis>
             <YAxis yAxisId="right" orientation="right" tickFormatter={(tick) => formatNumber(tick, 0)}>
               <Label value="Shares Outstanding" angle={-90} position="insideRight" style={{ textAnchor: 'middle' }} />
             </YAxis>
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CurrencyTooltip />} />
             <Legend />
             <Bar yAxisId="left" dataKey="Market Cap" fill={COLORS[0]} />
             <Line yAxisId="right" type="monotone" dataKey="Shares Outstanding" stroke={COLORS[1]} />

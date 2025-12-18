@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfidenceBadge } from './ConfidenceBadge';
+import { useChatContext, getCurrencySymbol } from '@/app/context/ChatContext';
 
 interface Metric {
   value: number | null;
@@ -36,6 +37,17 @@ export function PhilTownAnalysis({ ticker }: { ticker: string }) {
   const [data, setData] = useState<PhilTownResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Currency context
+  const { currency, convertValue } = useChatContext();
+  const currencySymbol = getCurrencySymbol(currency);
+
+  const formatPrice = (value: number | null | undefined): string => {
+    if (value === null || value === undefined) return 'N/A';
+    const converted = convertValue(value, 'USD');
+    if (converted === null) return 'N/A';
+    return `${currencySymbol}${converted.toFixed(2)}`;
+  };
 
   useEffect(() => {
     if (ticker) {
@@ -106,15 +118,15 @@ export function PhilTownAnalysis({ ticker }: { ticker: string }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center justify-between">
                 <span>Sticker Price:</span>
-                <span className="font-bold text-lg">${metrics.sticker_price?.toFixed(2) ?? 'N/A'}</span>
+                <span className="font-bold text-lg">{formatPrice(metrics.sticker_price)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span>MOS Price (50%):</span>
-                <span className="font-bold text-lg text-green-600">${metrics.mos_price?.toFixed(2) ?? 'N/A'}</span>
+                <span className="font-bold text-lg text-green-600">{formatPrice(metrics.mos_price)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span>Current Price:</span>
-                <span className="font-bold text-lg">${metrics.current_price?.toFixed(2) ?? 'N/A'}</span>
+                <span className="font-bold text-lg">{formatPrice(metrics.current_price)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span>Confidence:</span>

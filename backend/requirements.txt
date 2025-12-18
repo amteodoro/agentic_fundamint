@@ -26,8 +26,8 @@ pytest-asyncio
 # soupsieve
 # lxml
 
-# # For HTTP requests (if needed for future features)
-# requests
+# For HTTP requests (needed for FMP API)
+requests
 
 
 # For data visualization (if needed for future features)

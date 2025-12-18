@@ -25,6 +25,8 @@ services:
       - "8100:8100"
     volumes:
       - ./backend:/app
+    env_file:
+      - ./backend/.env
     environment:
       - DATABASE_URL=postgresql+asyncpg://fundamint:fundamint_secret@postgres:5432/fundamint
       - SECRET_KEY=your-super-secret-key-change-in-production

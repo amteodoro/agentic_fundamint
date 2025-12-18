@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { useChatContext, getCurrencySymbol } from '@/app/context/ChatContext';
 
 interface ProjectionDefaults {
     revenue_growth_pct: number;
@@ -120,6 +121,10 @@ export function PriceProjectionAnalysis({ ticker }: { ticker: string }) {
     const [data, setData] = useState<ProjectionData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Get currency context
+    const { currency, formatCurrency: contextFormatCurrency, convertValue } = useChatContext();
+    const currencySymbol = getCurrencySymbol(currency);
 
     // Parameter state - initialized from defaults
     const [revenueGrowth, setRevenueGrowth] = useState<number>(5);
@@ -244,12 +249,17 @@ export function PriceProjectionAnalysis({ ticker }: { ticker: string }) {
         }
     };
 
+    // Use context for currency formatting (with conversion)
     const formatCurrency = (value: number | null): string => {
+        return contextFormatCurrency(value, 'USD');
+    };
+
+    // Format price values with proper currency symbol
+    const formatPrice = (value: number | null | undefined): string => {
         if (value === null || value === undefined) return 'N/A';
-        if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`;
-        if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-        if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
-        return `$${value.toFixed(2)}`;
+        const converted = convertValue(value, 'USD');
+        if (converted === null) return 'N/A';
+        return `${currencySymbol}${converted.toFixed(2)}`;
     };
 
     const formatLargeNumber = (value: number | null): string => {
@@ -481,7 +491,7 @@ export function PriceProjectionAnalysis({ ticker }: { ticker: string }) {
                                     <div>
                                         <p className="text-sm text-gray-500">Target Price ({years} years)</p>
                                         <p className="text-4xl font-bold text-blue-600">
-                                            ${projection.futurePrice.toFixed(2)}
+                                            {formatPrice(projection.futurePrice)}
                                         </p>
                                     </div>
 
@@ -520,7 +530,7 @@ export function PriceProjectionAnalysis({ ticker }: { ticker: string }) {
                                 <div className="space-y-3 text-sm">
                                     <div className="flex justify-between py-2 border-b">
                                         <span className="text-gray-600">Current Price</span>
-                                        <span className="font-medium">${projection.currentPrice.toFixed(2)}</span>
+                                        <span className="font-medium">{formatPrice(projection.currentPrice)}</span>
                                     </div>
                                     <div className="flex justify-between py-2 border-b">
                                         <span className="text-gray-600">Current Revenue</span>
@@ -546,7 +556,7 @@ export function PriceProjectionAnalysis({ ticker }: { ticker: string }) {
                                     </div>
                                     <div className="flex justify-between py-2 bg-blue-50 rounded px-2 font-bold">
                                         <span>Target Price</span>
-                                        <span className="text-blue-600">${projection.futurePrice.toFixed(2)}</span>
+                                        <span className="text-blue-600">{formatPrice(projection.futurePrice)}</span>
                                     </div>
                                 </div>
                             )}
