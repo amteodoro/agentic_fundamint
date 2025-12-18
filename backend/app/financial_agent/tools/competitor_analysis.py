@@ -100,6 +100,9 @@ class CompetitorAnalysisTool(BaseTool):
                 "operating_margins": info.get('operatingMargins'),
                 "return_on_equity": info.get('returnOnEquity'),
                 "revenue_growth": info.get('revenueGrowth'),
+                "current_price": info.get('currentPrice') or info.get('regularMarketPrice'),
+                "earnings_growth": info.get('earningsGrowth'),
+                "target_price": info.get('targetMeanPrice'),
             }
         except Exception:
             return None

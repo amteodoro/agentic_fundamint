@@ -1,11 +1,19 @@
 
-
 import yfinance as yf
 import pandas as pd
 import numpy as np
 from typing import Dict, Any, Optional, List
 from datetime import date, datetime, timedelta
 from functools import lru_cache
+
+# Import FMP fallback fetcher
+try:
+    from .fmp_fetcher import fetch_stock_data_fmp, is_fmp_available
+    fmp_available = True
+except ImportError:
+    fmp_available = False
+    def fetch_stock_data_fmp(*args, **kwargs): return {}
+    def is_fmp_available(): return False
 
 # Cache configuration
 CACHE_MAXSIZE = 128
@@ -118,10 +126,12 @@ def _fetch_stock_data_cached(ticker_symbol: str, _timestamp: int) -> Dict[str, A
         "major_holders": pd.DataFrame(),
         "dividends": pd.Series(dtype=float),
         "actions": pd.DataFrame(),
-        "history": pd.DataFrame()
+        "history": pd.DataFrame(),
+        "data_source": "unknown"  # Track which API provided the data
     }
     yfinance_primary_fetch_successful = False
     fyf_used_for_core = False
+    data_sources_used = []
 
     # 1. Try yfinance first
     try:
@@ -137,7 +147,9 @@ def _fetch_stock_data_cached(ticker_symbol: str, _timestamp: int) -> Dict[str, A
                 except Exception: pass
             hist_data = stock_yf.history(period=f"{YEARS_OF_DATA+1}y")
             if hist_data is not None and not hist_data.empty: data["history"] = hist_data
-            if not data["financials"].empty and not data["balance_sheet"].empty: yfinance_primary_fetch_successful = True
+            if not data["financials"].empty and not data["balance_sheet"].empty: 
+                yfinance_primary_fetch_successful = True
+                data_sources_used.append("yfinance")
         else:
             hist_check = stock_yf.history(period="5d")
             if hist_check.empty and (not stock_info_yf or not stock_info_yf.get('symbol')):
@@ -156,14 +168,52 @@ def _fetch_stock_data_cached(ticker_symbol: str, _timestamp: int) -> Dict[str, A
                 if data[key].empty:
                     fyf_df = getattr(stock_fyf, fyf_attr_name, pd.DataFrame())
                     if isinstance(fyf_df, pd.DataFrame) and not fyf_df.empty: data[key] = fyf_df; fyf_used_for_core = True
-            if fyf_used_for_core: yfinance_primary_fetch_successful = True
+            if fyf_used_for_core: 
+                yfinance_primary_fetch_successful = True
+                data_sources_used.append("yfinance")
             if data["history"].empty:
                 hist_data_fyf = stock_fyf.history(period=f"{YEARS_OF_DATA+1}y")
                 if hist_data_fyf is not None and not hist_data_fyf.empty: data["history"] = hist_data_fyf
         except Exception as e_fyf:
             pass
 
-    # 3. Fallback to investiny for missing info fields
+    # 3. NEW: Fallback to Financial Modeling Prep API if yfinance failed
+    if not yfinance_primary_fetch_successful and fmp_available:
+        try:
+            fmp_data = fetch_stock_data_fmp(ticker_symbol)
+            
+            # Check if FMP returned valid data
+            if fmp_data and fmp_data.get("info", {}).get("symbol"):
+                # Merge FMP data into our data structure
+                if not data["info"].get("symbol"):
+                    data["info"] = fmp_data.get("info", {})
+                else:
+                    # Merge any missing fields from FMP
+                    for key, value in fmp_data.get("info", {}).items():
+                        if data["info"].get(key) is None and value is not None:
+                            data["info"][key] = value
+                
+                # Use FMP financial statements if yfinance didn't have them
+                if data["financials"].empty and not fmp_data.get("financials", pd.DataFrame()).empty:
+                    data["financials"] = fmp_data["financials"]
+                if data["balance_sheet"].empty and not fmp_data.get("balance_sheet", pd.DataFrame()).empty:
+                    data["balance_sheet"] = fmp_data["balance_sheet"]
+                if data["cash_flow"].empty and not fmp_data.get("cash_flow", pd.DataFrame()).empty:
+                    data["cash_flow"] = fmp_data["cash_flow"]
+                if data["history"].empty and not fmp_data.get("history", pd.DataFrame()).empty:
+                    data["history"] = fmp_data["history"]
+                if data["dividends"].empty and not fmp_data.get("dividends", pd.Series(dtype=float)).empty:
+                    data["dividends"] = fmp_data["dividends"]
+                
+                # Mark that we used FMP
+                if not data["financials"].empty or data["info"].get("symbol"):
+                    data_sources_used.append("financial_modeling_prep")
+                    yfinance_primary_fetch_successful = True  # Allow other fallbacks to fill gaps
+                    
+        except Exception as e_fmp:
+            pass
+
+    # 4. Fallback to investiny for missing info fields
     if investiny_available:
         investiny_info_map = {'EPS (TTM)': 'trailingEps', 'Market Cap': 'marketCap', 'P/E Ratio': 'trailingPE',
                               'Dividend (Yield)': 'dividendYield', 'Prev. Close': 'previousClose', 'EBITDA': 'ebitda',
@@ -191,7 +241,7 @@ def _fetch_stock_data_cached(ticker_symbol: str, _timestamp: int) -> Dict[str, A
                 data["info"]['symbol'] = ticker_symbol
                 data["info"]['longName'] = investiny_overview_data_dict.get('name', ticker_symbol)
 
-    # 4. Fallback to finvizfinance for missing info fields
+    # 5. Fallback to finvizfinance for missing info fields
     if finviz_available:
         finviz_map = {'P/E': 'trailingPE', 'EPS (ttm)': 'trailingEps', 'Market Cap': 'marketCap', 'Dividend %': 'dividendYield',
                       'P/S': 'priceToSalesTrailing12Months', 'Insider Own': 'heldPercentInsiders', 'Inst Own': 'heldPercentInstitutions'}
@@ -210,10 +260,49 @@ def _fetch_stock_data_cached(ticker_symbol: str, _timestamp: int) -> Dict[str, A
             if not data["info"].get('sector') and 'Sector' in finviz_data: data["info"]['sector'] = finviz_data['Sector']
             if not data["info"].get('industry') and 'Industry' in finviz_data: data["info"]['industry'] = finviz_data['Industry']
 
+    # Set final data source
+    if len(data_sources_used) == 0:
+        data["data_source"] = "unknown"
+    elif len(data_sources_used) == 1:
+        data["data_source"] = data_sources_used[0]
+    else:
+        data["data_source"] = "mixed (" + ", ".join(data_sources_used) + ")"
+
     return data
 
-def fetch_stock_data(ticker_symbol: str) -> Dict[str, Any]:
-    # Calculate current timestamp rounded to the nearest CACHE_TTL_SECONDS
+def fetch_stock_data(ticker_symbol: str, source: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Fetch stock data for a given ticker.
+    
+    Args:
+        ticker_symbol: The stock ticker symbol
+        source: Optional data source preference. Values:
+            - None or "yfinance": Use yfinance with all fallbacks (default)
+            - "fmp": Use Financial Modeling Prep API only
+    
+    Returns:
+        Dictionary containing stock data
+    """
+    # If FMP is explicitly requested, use it directly
+    if source == "fmp":
+        if fmp_available:
+            fmp_data = fetch_stock_data_fmp(ticker_symbol)
+            if fmp_data and fmp_data.get("info", {}).get("symbol"):
+                return fmp_data
+        # If FMP fails or is unavailable, return empty data structure
+        return {
+            "info": {},
+            "financials": pd.DataFrame(),
+            "balance_sheet": pd.DataFrame(),
+            "cash_flow": pd.DataFrame(),
+            "major_holders": pd.DataFrame(),
+            "dividends": pd.Series(dtype=float),
+            "actions": pd.DataFrame(),
+            "history": pd.DataFrame(),
+            "data_source": "financial_modeling_prep (failed)"
+        }
+    
+    # Default: Use yfinance with all fallbacks
     now = datetime.now()
     # Use integer division to get the number of full cache intervals since epoch
     timestamp = int(now.timestamp() // CACHE_TTL_SECONDS) * CACHE_TTL_SECONDS

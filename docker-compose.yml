@@ -1,6 +1,22 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: fundamint
+      POSTGRES_PASSWORD: fundamint_secret
+      POSTGRES_DB: fundamint
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fundamint"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
@@ -9,6 +25,15 @@ services:
       - "8100:8100"
     volumes:
       - ./backend:/app
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://fundamint:fundamint_secret@postgres:5432/fundamint
+      - SECRET_KEY=your-super-secret-key-change-in-production
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+    depends_on:
+      postgres:
+        condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8100 --reload --timeout-keep-alive 60
 
   frontend:
@@ -26,3 +51,4 @@ services:
 
 volumes:
   node_modules:
+  postgres_data:

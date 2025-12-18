@@ -16,6 +16,7 @@ class StockProfile(BaseModel):
     country: Optional[str] = Field(None, description="The country where the company is based.")
     website: Optional[str] = Field(None, description="The company's official website.")
     sharesOutstanding: Optional[int] = Field(None, description="The number of shares outstanding.")
+    dataSource: Optional[str] = Field(None, description="The data source that provided this information (yfinance, financial_modeling_prep, or mixed).")
 
 from pydantic import BaseModel, Field, RootModel
 
@@ -58,21 +59,42 @@ class KeyMetric(BaseModel):
     """Pydantic model for a single key metric."""
     label: str
     value: Optional[str] = None
+    rawValue: Optional[float] = Field(None, description="Raw numeric value for currency conversion")
+    isCurrency: bool = Field(False, description="Whether this metric represents a currency value")
 
 class KeyMetricsResponse(BaseModel):
     """Pydantic model for the key metrics API response."""
     metrics: List[KeyMetric]
+    dataSource: Optional[str] = Field(None, description="The data source that provided this information.")
+
+
+class StockQuote(BaseModel):
+    """Pydantic model for a quick stock quote."""
+    ticker: str
+    price: float
+    change: float
+    changePercent: float
+    previousClose: Optional[float] = None
+    dayHigh: Optional[float] = None
+    dayLow: Optional[float] = None
+    volume: Optional[int] = None
+    dataSource: Optional[str] = Field(None, description="The data source that provided this information.")
+
 
 # Create a new router to organize stock-related endpoints
 router = APIRouter()
 
 # 2. Create the API Endpoints
 @router.get("/stock/{ticker}/profile", response_model=StockProfile)
-async def get_stock_profile(ticker: str):
+async def get_stock_profile(ticker: str, source: Optional[str] = None):
     """
     Retrieves profile information for a given stock ticker.
+    
+    Args:
+        ticker: Stock ticker symbol
+        source: Data source preference ("yfinance" or "fmp")
     """
-    stock_data = fetch_stock_data(ticker)
+    stock_data = fetch_stock_data(ticker, source=source)
     info = stock_data.get("info", {})
 
     if not info or info.get('longName') is None:
@@ -87,7 +109,8 @@ async def get_stock_profile(ticker: str):
             longBusinessSummary=info.get('longBusinessSummary'),
             country=info.get('country'),
             website=info.get('website'),
-            sharesOutstanding=info.get('sharesOutstanding')
+            sharesOutstanding=info.get('sharesOutstanding'),
+            dataSource=stock_data.get('data_source', 'unknown')
         )
         
         return profile_data
@@ -95,12 +118,54 @@ async def get_stock_profile(ticker: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/stock/{ticker}/quote", response_model=StockQuote)
+async def get_stock_quote(ticker: str, source: Optional[str] = None):
+    """
+    Retrieves current quote information for a given stock ticker.
+    Returns current price, change, and change percent.
+    
+    Args:
+        ticker: Stock ticker symbol
+        source: Data source preference ("yfinance" or "fmp")
+    """
+    stock_data = fetch_stock_data(ticker, source=source)
+    info = stock_data.get("info", {})
+
+    if not info or info.get('longName') is None:
+        raise HTTPException(status_code=404, detail=f"Ticker '{ticker}' not found or no quote available.")
+
+    try:
+        # Get price fields from yfinance info dict
+        current_price = info.get('currentPrice') or info.get('regularMarketPrice') or 0
+        previous_close = info.get('previousClose') or info.get('regularMarketPreviousClose') or 0
+        
+        # Calculate change and percent
+        change = current_price - previous_close if previous_close else 0
+        change_percent = (change / previous_close * 100) if previous_close else 0
+        
+        quote_data = StockQuote(
+            ticker=ticker.upper(),
+            price=round(current_price, 2),
+            change=round(change, 2),
+            changePercent=round(change_percent, 2),
+            previousClose=round(previous_close, 2) if previous_close else None,
+            dayHigh=info.get('dayHigh') or info.get('regularMarketDayHigh'),
+            dayLow=info.get('dayLow') or info.get('regularMarketDayLow'),
+            volume=info.get('volume') or info.get('regularMarketVolume'),
+            dataSource=stock_data.get('data_source', 'unknown')
+        )
+        
+        return quote_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/stock/{ticker}/financials", response_model=FinancialStatementsResponse)
-async def get_stock_financials(ticker: str, statement_type: str = "annual"):
+async def get_stock_financials(ticker: str, statement_type: str = "annual", source: Optional[str] = None):
     """
     Retrieves the annual income statement for a given stock ticker.
     """
-    stock_data = fetch_stock_data(ticker)
+    stock_data = fetch_stock_data(ticker, source=source)
     info = stock_data.get("info", {})
 
     if not info or info.get('longName') is None:
@@ -175,30 +240,94 @@ async def get_stock_price_history(ticker: str, period: str = "1y"):
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 @router.get("/search", response_model=StockSearchResponse)
-async def search_stocks(q: str):
+async def search_stocks(q: str, source: Optional[str] = None):
     """
-    Searches for stocks based on a query string.
+    Searches for stocks based on a query string (ticker symbol or company name).
+    
+    Args:
+        q: Search query (ticker symbol or company name, e.g., "AAPL" or "Apple")
+        source: Data source preference ("yfinance" or "fmp")
     """
     if not q:  # Handle empty query string
         return StockSearchResponse(results=[])
-
-    # Attempt to fetch data using the new data_fetcher
-    stock_data = fetch_stock_data(q.upper())
-    info = stock_data.get("info", {})
-
-    if info and info.get('longName'):
-        # If valid, return it as a search result
-        return StockSearchResponse(results=[SearchResult(symbol=q.upper(), longName=info.get('longName'))])
-    else:
-        # If not valid, return an empty list
-        return StockSearchResponse(results=[])
+    
+    query = q.strip()
+    results = []
+    
+    # Use FMP search if selected
+    if source == "fmp":
+        try:
+            from ..fmp_fetcher import search_fmp
+            fmp_results = search_fmp(query, limit=10)
+            if fmp_results:
+                for item in fmp_results:
+                    results.append(SearchResult(
+                        symbol=item.get("symbol", ""),
+                        longName=item.get("longName", item.get("symbol", ""))
+                    ))
+                return StockSearchResponse(results=results)
+        except Exception as e:
+            print(f"FMP search error: {e}")
+    
+    # Default: Use yfinance search
+    try:
+        import yfinance as yf
+        
+        # Use yfinance's Search functionality
+        search = yf.Search(query, max_results=10)
+        
+        # Get quotes (stock results)
+        if hasattr(search, 'quotes') and search.quotes:
+            for quote in search.quotes[:10]:
+                symbol = quote.get('symbol', '')
+                name = quote.get('longname') or quote.get('shortname') or quote.get('name') or symbol
+                exchange = quote.get('exchange', '')
+                
+                if symbol:
+                    display_name = name
+                    if exchange and exchange not in name:
+                        display_name += f" ({exchange})"
+                    
+                    results.append(SearchResult(
+                        symbol=symbol,
+                        longName=display_name
+                    ))
+        
+        # If yfinance Search didn't find anything, fall back to direct ticker lookup
+        if not results:
+            stock_data = fetch_stock_data(query.upper(), source=source)
+            info = stock_data.get("info", {})
+            
+            if info and info.get('longName'):
+                results.append(SearchResult(
+                    symbol=query.upper(),
+                    longName=info.get('longName')
+                ))
+                
+    except Exception as e:
+        print(f"yfinance search error: {e}")
+        
+        # Final fallback: try direct ticker lookup
+        try:
+            stock_data = fetch_stock_data(query.upper(), source=source)
+            info = stock_data.get("info", {})
+            
+            if info and info.get('longName'):
+                results.append(SearchResult(
+                    symbol=query.upper(),
+                    longName=info.get('longName')
+                ))
+        except Exception:
+            pass
+    
+    return StockSearchResponse(results=results)
 
 @router.get("/stock/{ticker}/metrics", response_model=KeyMetricsResponse)
-async def get_key_metrics(ticker: str):
+async def get_key_metrics(ticker: str, source: Optional[str] = None):
     """
     Retrieves key metrics for a given stock ticker.
     """
-    stock_data = fetch_stock_data(ticker)
+    stock_data = fetch_stock_data(ticker, source=source)
     info = stock_data.get("info", {})
 
     if not info or info.get('longName') is None:
@@ -222,22 +351,28 @@ async def get_key_metrics(ticker: str):
             "Open": "open",
         }
 
+        # Currency metrics (can be converted on frontend)
+        currency_metrics = {"Market Cap", "52 Week High", "52 Week Low", "Previous Close", "Open"}
+
         for label, key in metrics_to_extract.items():
             value = info.get(key)
             if value is not None:
+                is_currency = label in currency_metrics
+                raw_value = float(value) if isinstance(value, (int, float)) else None
+                
                 # Format percentage values
                 if "Yield" in label and isinstance(value, (int, float)):
-                    metrics_list.append(KeyMetric(label=label, value=f"{value:.2%}"))
+                    metrics_list.append(KeyMetric(label=label, value=f"{value:.2%}", rawValue=raw_value, isCurrency=False))
                 # Format large numbers (e.g., Market Cap, Volume)
                 elif "Cap" in label or "Volume" in label and isinstance(value, (int, float)):
-                    metrics_list.append(KeyMetric(label=label, value=f"{value:,.0f}"))
+                    metrics_list.append(KeyMetric(label=label, value=f"{value:,.0f}", rawValue=raw_value, isCurrency=is_currency))
                 else:
-                    metrics_list.append(KeyMetric(label=label, value=str(value)))
+                    metrics_list.append(KeyMetric(label=label, value=str(value), rawValue=raw_value, isCurrency=is_currency))
 
         if not metrics_list:
             raise HTTPException(status_code=404, detail=f"No key metrics found for ticker '{ticker}'.")
 
-        return KeyMetricsResponse(metrics=metrics_list)
+        return KeyMetricsResponse(metrics=metrics_list, dataSource=stock_data.get('data_source', 'unknown'))
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
@@ -367,3 +502,129 @@ async def get_dividends(ticker: str):
         print(f"[Backend] Error fetching dividends for {ticker}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# Exchange rate response model
+class ExchangeRateResponse(BaseModel):
+    """Pydantic model for exchange rate response."""
+    fromCurrency: str = Field(..., description="Source currency code")
+    toCurrency: str = Field(..., description="Target currency code")
+    rate: float = Field(..., description="Exchange rate")
+    timestamp: str = Field(..., description="Timestamp of the rate")
+
+
+# Cache for exchange rate (to avoid too many API calls)
+_exchange_rate_cache: Dict[str, tuple] = {}
+EXCHANGE_RATE_CACHE_TTL = 60 * 5  # 5 minutes
+
+
+@router.get("/exchange-rate", response_model=ExchangeRateResponse)
+async def get_exchange_rate(fromCurrency: str = "USD", toCurrency: str = "EUR"):
+    """
+    Get the current exchange rate between two currencies.
+    Uses yfinance to fetch real-time forex data.
+    
+    Args:
+        fromCurrency: Source currency code (default: USD)
+        toCurrency: Target currency code (default: EUR)
+    """
+    import yfinance as yf
+    from datetime import datetime
+    import time
+    
+    # Normalize currency codes
+    from_code = fromCurrency.upper()
+    to_code = toCurrency.upper()
+    cache_key = f"{from_code}_{to_code}"
+    
+    # Check cache
+    if cache_key in _exchange_rate_cache:
+        cached_rate, cached_time = _exchange_rate_cache[cache_key]
+        if time.time() - cached_time < EXCHANGE_RATE_CACHE_TTL:
+            return ExchangeRateResponse(
+                fromCurrency=from_code,
+                toCurrency=to_code,
+                rate=cached_rate,
+                timestamp=datetime.fromtimestamp(cached_time).isoformat()
+            )
+    
+    # If same currency, rate is 1.0
+    if from_code == to_code:
+        return ExchangeRateResponse(
+            fromCurrency=from_code,
+            toCurrency=to_code,
+            rate=1.0,
+            timestamp=datetime.now().isoformat()
+        )
+    
+    try:
+        # yfinance forex ticker format: EURUSD=X, USDEUR=X, etc.
+        ticker_symbol = f"{from_code}{to_code}=X"
+        
+        ticker = yf.Ticker(ticker_symbol)
+        info = ticker.info
+        
+        rate = info.get('regularMarketPrice') or info.get('previousClose')
+        
+        if rate:
+            # Cache the result
+            _exchange_rate_cache[cache_key] = (rate, time.time())
+            
+            return ExchangeRateResponse(
+                fromCurrency=from_code,
+                toCurrency=to_code,
+                rate=rate,
+                timestamp=datetime.now().isoformat()
+            )
+        
+        # Fallback: try the inverse rate
+        inverse_ticker_symbol = f"{to_code}{from_code}=X"
+        inverse_ticker = yf.Ticker(inverse_ticker_symbol)
+        inverse_info = inverse_ticker.info
+        
+        inverse_rate = inverse_info.get('regularMarketPrice') or inverse_info.get('previousClose')
+        
+        if inverse_rate and inverse_rate > 0:
+            rate = 1.0 / inverse_rate
+            _exchange_rate_cache[cache_key] = (rate, time.time())
+            
+            return ExchangeRateResponse(
+                fromCurrency=from_code,
+                toCurrency=to_code,
+                rate=rate,
+                timestamp=datetime.now().isoformat()
+            )
+        
+        # If all else fails, return default rates for common pairs
+        default_rates = {
+            "USD_EUR": 0.92,
+            "EUR_USD": 1.09,
+        }
+        
+        if cache_key in default_rates:
+            return ExchangeRateResponse(
+                fromCurrency=from_code,
+                toCurrency=to_code,
+                rate=default_rates[cache_key],
+                timestamp=datetime.now().isoformat()
+            )
+        
+        raise HTTPException(status_code=404, detail=f"Exchange rate not found for {from_code}/{to_code}")
+        
+    except Exception as e:
+        # Return default for USD/EUR if there's an error
+        if from_code == "USD" and to_code == "EUR":
+            return ExchangeRateResponse(
+                fromCurrency=from_code,
+                toCurrency=to_code,
+                rate=0.92,
+                timestamp=datetime.now().isoformat()
+            )
+        elif from_code == "EUR" and to_code == "USD":
+            return ExchangeRateResponse(
+                fromCurrency=from_code,
+                toCurrency=to_code,
+                rate=1.09,
+                timestamp=datetime.now().isoformat()
+            )
+        
+        raise HTTPException(status_code=500, detail=f"Error fetching exchange rate: {str(e)}")

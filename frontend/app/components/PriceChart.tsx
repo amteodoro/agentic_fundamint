@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label } from 'recharts';
-import { formatNumber, CustomTooltip, COLORS } from '@/lib/chart-utils';
+import { createCurrencyFormatter, createCurrencyTooltip, COLORS } from '@/lib/chart-utils';
+import { useChatContext, getCurrencySymbol } from '@/app/context/ChatContext';
 
 interface PriceData {
   Date: string;
@@ -14,6 +15,31 @@ export function PriceChart({ ticker }: { ticker: string }) {
   const [data, setData] = useState<PriceData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { currency, exchangeRate } = useChatContext();
+  const currencySymbol = getCurrencySymbol(currency);
+
+  // Create currency-aware formatters
+  const tickFormatter = useMemo(() =>
+    createCurrencyFormatter(currencySymbol, currency === 'EUR' ? exchangeRate : 1, 2, true),
+    [currencySymbol, currency, exchangeRate]
+  );
+
+  const CurrencyTooltip = useMemo(() =>
+    createCurrencyTooltip(currencySymbol, currency === 'EUR' ? exchangeRate : 1),
+    [currencySymbol, currency, exchangeRate]
+  );
+
+  // Convert data to selected currency
+  const convertedData = useMemo(() => {
+    if (currency === 'EUR' && exchangeRate) {
+      return data.map(d => ({
+        ...d,
+        Close: d.Close * exchangeRate
+      }));
+    }
+    return data;
+  }, [data, currency, exchangeRate]);
 
   useEffect(() => {
     if (ticker) {
@@ -40,7 +66,7 @@ export function PriceChart({ ticker }: { ticker: string }) {
   if (loading) return (
     <Card>
       <CardHeader>
-        <CardTitle>Price Chart</CardTitle>
+        <CardTitle>Price Chart ({currency})</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[300px] w-full flex items-center justify-center">
@@ -53,7 +79,7 @@ export function PriceChart({ ticker }: { ticker: string }) {
   if (!data.length) return (
     <Card>
       <CardHeader>
-        <CardTitle>Price Chart</CardTitle>
+        <CardTitle>Price Chart ({currency})</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[300px] w-full flex items-center justify-center">
@@ -66,17 +92,17 @@ export function PriceChart({ ticker }: { ticker: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Price Chart</CardTitle>
+        <CardTitle>Price Chart ({currency})</CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={data}>
+          <LineChart data={convertedData}>
             <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.5} />
             <XAxis dataKey="Date" />
-            <YAxis tickFormatter={(tick) => formatNumber(tick, 2)}>
-              <Label value="Price (USD)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
+            <YAxis tickFormatter={tickFormatter}>
+              <Label value={`Price (${currency})`} angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} />
             </YAxis>
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CurrencyTooltip />} />
             <Line type="monotone" dataKey="Close" stroke={COLORS[0]} dot={false} />
           </LineChart>
         </ResponsiveContainer>

@@ -4,30 +4,42 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from '@/lib/utils';
+import { useChatContext, getCurrencySymbol } from '@/app/context/ChatContext';
 
 interface FinancialStatementRow {
   Date: string;
   [key: string]: any;
 }
 
-const formatNumber = (num: number) => {
-  if (num === 0) return '0';
-  if (Math.abs(num) >= 1e9) {
-    return `${(num / 1e9).toFixed(2)}B`;
-  }
-  if (Math.abs(num) >= 1e6) {
-    return `${(num / 1e6).toFixed(2)}M`;
-  }
-  if (Math.abs(num) >= 1e3) {
-    return `${(num / 1e3).toFixed(2)}K`;
-  }
-  return num.toLocaleString();
-};
+
 
 export function FinancialStatementsTable({ ticker }: { ticker: string }) {
   const [financials, setFinancials] = useState<FinancialStatementRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Currency context
+  const { currency, convertValue } = useChatContext();
+  const currencySymbol = getCurrencySymbol(currency);
+
+  const formatNumber = (num: number): string => {
+    // Convert to selected currency
+    const converted = convertValue(num, 'USD');
+    if (converted === null) return 'N/A';
+
+    if (converted === 0) return `${currencySymbol}0`;
+    const absValue = Math.abs(converted);
+    if (absValue >= 1e9) {
+      return `${currencySymbol}${(converted / 1e9).toFixed(2)}B`;
+    }
+    if (absValue >= 1e6) {
+      return `${currencySymbol}${(converted / 1e6).toFixed(2)}M`;
+    }
+    if (absValue >= 1e3) {
+      return `${currencySymbol}${(converted / 1e3).toFixed(2)}K`;
+    }
+    return `${currencySymbol}${converted.toLocaleString()}`;
+  };
 
   useEffect(() => {
     if (ticker) {

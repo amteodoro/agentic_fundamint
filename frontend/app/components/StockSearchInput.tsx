@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import { useDebounce } from 'use-debounce';
+import { useChatContext } from '@/app/context/ChatContext';
 
 interface SearchResult {
   symbol: string;
@@ -18,6 +19,7 @@ export function StockSearchInput() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const searchRef = useRef<HTMLDivElement>(null);
+  const { dataSource } = useChatContext();
 
   useEffect(() => {
     const fetchSearchResults = async () => {
@@ -29,7 +31,8 @@ export function StockSearchInput() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`http://localhost:8100/api/search?q=${debouncedSearchTerm}`);
+        // Include the selected data source in the search request
+        const response = await fetch(`http://localhost:8100/api/search?q=${debouncedSearchTerm}&source=${dataSource}`);
         if (!response.ok) {
           throw new Error('Failed to fetch search results.');
         }
@@ -43,7 +46,7 @@ export function StockSearchInput() {
     };
 
     fetchSearchResults();
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm, dataSource]);
 
   const handleSelectStock = (symbol: string) => {
     setSearchTerm(''); // Clear search term
@@ -74,7 +77,7 @@ export function StockSearchInput() {
         onChange={(e) => setSearchTerm(e.target.value)}
         className="w-full"
       />
-      {loading && <div className="absolute z-10 w-full bg-white shadow-md rounded-md mt-1 p-2">Loading...</div>}
+      {loading && <div className="absolute z-10 w-full bg-white shadow-md rounded-md mt-1 p-2">Searching via {dataSource === 'fmp' ? 'FMP' : 'Yahoo Finance'}...</div>}
       {error && <div className="absolute z-10 w-full bg-white shadow-md rounded-md mt-1 p-2 text-red-500">Error: {error}</div>}
       {searchResults.length > 0 && searchTerm.trim() !== '' && !loading && (
         <div className="absolute z-10 w-full bg-white shadow-md rounded-md mt-1 max-h-60 overflow-y-auto">
@@ -92,3 +95,4 @@ export function StockSearchInput() {
     </div>
   );
 }
+

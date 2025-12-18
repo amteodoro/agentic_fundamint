@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useChatContext } from '@/app/context/ChatContext';
@@ -19,6 +20,10 @@ const ChatSidebar = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const handleClearChat = () => {
+    setMessages([]);
+  };
 
   const handleSend = async () => {
     if (input.trim() === '' || isLoading) return;
@@ -69,11 +74,40 @@ const ChatSidebar = () => {
 
   return (
     <div className="relative h-full w-80 border-l bg-gray-50 dark:bg-gray-900 hidden md:block">
-      <div className="absolute top-0 left-0 right-0 bottom-20 p-4 overflow-y-auto">
+      {/* Header with Clear button */}
+      <div className="absolute top-0 left-0 right-0 p-3 border-b bg-white dark:bg-gray-800 flex items-center justify-between">
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          {ticker ? `Chat: ${ticker}` : 'AI Assistant'}
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleClearChat}
+          disabled={messages.length === 0}
+          className="text-xs text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+        >
+          Clear Chat
+        </Button>
+      </div>
+
+      {/* Messages area - adjusted top position to account for header */}
+      <div className="absolute top-12 left-0 right-0 bottom-20 p-4 overflow-y-auto">
+        {messages.length === 0 && (
+          <div className="text-center text-gray-400 dark:text-gray-500 text-sm mt-8">
+            <p>No messages yet.</p>
+            <p className="mt-2">{ticker ? `Ask me anything about ${ticker}!` : 'Select a stock to get started.'}</p>
+          </div>
+        )}
         {messages.map((msg, index) => (
           <div key={index} className={`my-2 ${msg.sender === 'user' ? 'text-right' : 'text-left'}`}>
-            <div className={`inline-block p-2 rounded-lg ${msg.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>
-              {msg.text}
+            <div className={`inline-block p-2 rounded-lg max-w-full ${msg.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100'}`}>
+              {msg.sender === 'bot' ? (
+                <div className="prose prose-sm dark:prose-invert prose-headings:text-base prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-strong:font-semibold max-w-none text-left">
+                  <ReactMarkdown>{msg.text}</ReactMarkdown>
+                </div>
+              ) : (
+                msg.text
+              )}
             </div>
           </div>
         ))}
@@ -86,7 +120,9 @@ const ChatSidebar = () => {
           </div>
         )}
       </div>
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
+
+      {/* Input area */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white dark:bg-gray-800">
         <div className="flex space-x-2">
           <Input
             value={input}
