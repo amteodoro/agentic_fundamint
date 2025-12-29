@@ -14,6 +14,12 @@ import {
     removeStockFromWatchlist,
     Watchlist,
 } from '@/lib/api/watchlist';
+import {
+    getBulkEarningsDates,
+    BulkEarningsItem,
+    formatDaysUntilEarnings,
+    getEarningsUrgencyClass,
+} from '@/lib/api/earnings';
 
 interface StockQuote {
     ticker: string;
@@ -33,6 +39,7 @@ export function WatchlistManager({ onSelectStock }: WatchlistManagerProps) {
 
     const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
     const [stockQuotes, setStockQuotes] = useState<Record<string, StockQuote>>({});
+    const [earningsDates, setEarningsDates] = useState<Record<string, BulkEarningsItem>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showCreateForm, setShowCreateForm] = useState(false);
@@ -60,6 +67,7 @@ export function WatchlistManager({ onSelectStock }: WatchlistManagerProps) {
 
             if (allTickers.size > 0) {
                 fetchStockQuotes(Array.from(allTickers));
+                fetchEarningsDates(Array.from(allTickers));
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load watchlists');
@@ -91,6 +99,19 @@ export function WatchlistManager({ onSelectStock }: WatchlistManagerProps) {
         );
 
         setStockQuotes(prev => ({ ...prev, ...quotes }));
+    };
+
+    const fetchEarningsDates = async (tickers: string[]) => {
+        try {
+            const response = await getBulkEarningsDates(tickers);
+            const earningsMap: Record<string, BulkEarningsItem> = {};
+            response.earnings.forEach(e => {
+                earningsMap[e.symbol] = e;
+            });
+            setEarningsDates(prev => ({ ...prev, ...earningsMap }));
+        } catch {
+            // Silently fail - earnings dates are supplementary
+        }
     };
 
     useEffect(() => {
@@ -313,6 +334,7 @@ export function WatchlistManager({ onSelectStock }: WatchlistManagerProps) {
                                                             <th className="text-right py-2 px-2 text-gray-500 font-medium">Current Price</th>
                                                             <th className="text-right py-2 px-2 text-gray-500 font-medium">Day Change</th>
                                                             <th className="text-right py-2 px-2 text-gray-500 font-medium">Target</th>
+                                                            <th className="text-right py-2 px-2 text-gray-500 font-medium">Earnings</th>
                                                             <th className="text-left py-2 px-2 text-gray-500 font-medium">Notes</th>
                                                             <th className="text-right py-2 px-2"></th>
                                                         </tr>
@@ -323,6 +345,7 @@ export function WatchlistManager({ onSelectStock }: WatchlistManagerProps) {
                                                             const targetUpside = item.target_price && quote
                                                                 ? ((item.target_price - quote.price) / quote.price) * 100
                                                                 : null;
+                                                            const earningsInfo = earningsDates[item.ticker];
 
                                                             return (
                                                                 <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50">
@@ -362,6 +385,15 @@ export function WatchlistManager({ onSelectStock }: WatchlistManagerProps) {
                                                                             </div>
                                                                         ) : (
                                                                             <span className="text-gray-400">-</span>
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="py-3 px-2 text-right">
+                                                                        {earningsInfo?.nextEarningsDate ? (
+                                                                            <div className={`text-xs ${getEarningsUrgencyClass(earningsInfo.daysUntilEarnings)}`}>
+                                                                                {formatDaysUntilEarnings(earningsInfo.daysUntilEarnings)}
+                                                                            </div>
+                                                                        ) : (
+                                                                            <span className="text-gray-400 text-xs">-</span>
                                                                         )}
                                                                     </td>
                                                                     <td className="py-3 px-2 text-left text-gray-600 max-w-[200px] truncate">

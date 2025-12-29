@@ -15,6 +15,12 @@ import {
     Portfolio,
     Holding,
 } from '@/lib/api/portfolio';
+import {
+    getBulkEarningsDates,
+    BulkEarningsItem,
+    formatDaysUntilEarnings,
+    getEarningsUrgencyClass,
+} from '@/lib/api/earnings';
 
 interface StockQuote {
     ticker: string;
@@ -34,6 +40,7 @@ export function PortfolioManager({ onSelectStock }: PortfolioManagerProps) {
 
     const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
     const [stockQuotes, setStockQuotes] = useState<Record<string, StockQuote>>({});
+    const [earningsDates, setEarningsDates] = useState<Record<string, BulkEarningsItem>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showCreateForm, setShowCreateForm] = useState(false);
@@ -62,6 +69,7 @@ export function PortfolioManager({ onSelectStock }: PortfolioManagerProps) {
 
             if (allTickers.size > 0) {
                 fetchStockQuotes(Array.from(allTickers));
+                fetchEarningsDates(Array.from(allTickers));
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load portfolios');
@@ -94,6 +102,19 @@ export function PortfolioManager({ onSelectStock }: PortfolioManagerProps) {
         );
 
         setStockQuotes(prev => ({ ...prev, ...quotes }));
+    };
+
+    const fetchEarningsDates = async (tickers: string[]) => {
+        try {
+            const response = await getBulkEarningsDates(tickers);
+            const earningsMap: Record<string, BulkEarningsItem> = {};
+            response.earnings.forEach(e => {
+                earningsMap[e.symbol] = e;
+            });
+            setEarningsDates(prev => ({ ...prev, ...earningsMap }));
+        } catch {
+            // Silently fail - earnings dates are supplementary
+        }
     };
 
     useEffect(() => {
@@ -381,6 +402,7 @@ export function PortfolioManager({ onSelectStock }: PortfolioManagerProps) {
                                                                 <th className="text-right py-2 px-2 text-gray-500 font-medium">Avg Cost</th>
                                                                 <th className="text-right py-2 px-2 text-gray-500 font-medium">Price</th>
                                                                 <th className="text-right py-2 px-2 text-gray-500 font-medium">P&L</th>
+                                                                <th className="text-right py-2 px-2 text-gray-500 font-medium">Earnings</th>
                                                                 <th className="text-right py-2 px-2"></th>
                                                             </tr>
                                                         </thead>
@@ -388,6 +410,7 @@ export function PortfolioManager({ onSelectStock }: PortfolioManagerProps) {
                                                             {portfolio.holdings.map((holding) => {
                                                                 const quote = stockQuotes[holding.ticker];
                                                                 const pnl = calculatePnL(holding);
+                                                                const earningsInfo = earningsDates[holding.ticker];
 
                                                                 return (
                                                                     <tr key={holding.id} className="border-b border-gray-50 hover:bg-gray-50">
@@ -425,6 +448,15 @@ export function PortfolioManager({ onSelectStock }: PortfolioManagerProps) {
                                                                                 </div>
                                                                             ) : (
                                                                                 <span className="text-gray-400">-</span>
+                                                                            )}
+                                                                        </td>
+                                                                        <td className="py-3 px-2 text-right">
+                                                                            {earningsInfo?.nextEarningsDate ? (
+                                                                                <div className={`text-xs ${getEarningsUrgencyClass(earningsInfo.daysUntilEarnings)}`}>
+                                                                                    {formatDaysUntilEarnings(earningsInfo.daysUntilEarnings)}
+                                                                                </div>
+                                                                            ) : (
+                                                                                <span className="text-gray-400 text-xs">-</span>
                                                                             )}
                                                                         </td>
                                                                         <td className="py-3 px-2 text-right">

@@ -469,6 +469,154 @@ def is_fmp_available() -> bool:
         return False
 
 
+def fetch_earnings_calendar(from_date: Optional[str] = None, to_date: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Fetch earnings calendar from FMP API.
+    
+    Args:
+        from_date: Start date in YYYY-MM-DD format (default: today)
+        to_date: End date in YYYY-MM-DD format (default: 30 days from today)
+    
+    Returns:
+        List of earnings announcements with date, symbol, EPS estimates, etc.
+    """
+    if not from_date:
+        from_date = datetime.now().strftime("%Y-%m-%d")
+    if not to_date:
+        to_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+    
+    result = _make_fmp_request("earnings-calendar", {
+        "from": from_date,
+        "to": to_date
+    })
+    
+    if not result or not isinstance(result, list):
+        return []
+    
+    # Process and enrich earnings data
+    processed_earnings = []
+    for earning in result:
+        processed_earnings.append({
+            "symbol": earning.get("symbol"),
+            "date": earning.get("date"),
+            "time": earning.get("time", "unknown"),  # bmo (before market open), amc (after market close), dmh (during market hours)
+            "epsEstimate": earning.get("epsEstimate"),
+            "epsActual": earning.get("epsActual"),
+            "revenueEstimate": earning.get("revenueEstimate"),
+            "revenueActual": earning.get("revenueActual"),
+            "fiscalDateEnding": earning.get("fiscalDateEnding"),
+            "updatedFromDate": earning.get("updatedFromDate"),
+        })
+    
+    return processed_earnings
+
+
+def fetch_earnings_history(ticker: str, limit: int = 20) -> List[Dict[str, Any]]:
+    """
+    Fetch historical earnings for a specific stock.
+    
+    Args:
+        ticker: Stock ticker symbol
+        limit: Maximum number of historical earnings to return
+    
+    Returns:
+        List of historical earnings with actual vs estimated EPS
+    """
+    result = _make_fmp_request("earnings", {"symbol": ticker.upper()})
+    
+    if not result or not isinstance(result, list):
+        return []
+    
+    # Process and return historical earnings
+    historical = []
+    for earning in result[:limit]:
+        surprise = None
+        surprise_percent = None
+        
+        eps_actual = earning.get("eps")
+        eps_estimate = earning.get("epsEstimated")
+        
+        if eps_actual is not None and eps_estimate is not None and eps_estimate != 0:
+            surprise = eps_actual - eps_estimate
+            surprise_percent = (surprise / abs(eps_estimate)) * 100
+        
+        historical.append({
+            "date": earning.get("date"),
+            "symbol": earning.get("symbol"),
+            "epsActual": eps_actual,
+            "epsEstimate": eps_estimate,
+            "epsSurprise": surprise,
+            "epsSurprisePercent": surprise_percent,
+            "revenue": earning.get("revenue"),
+            "revenueEstimate": earning.get("revenueEstimated"),
+            "fiscalDateEnding": earning.get("fiscalDateEnding"),
+            "reportedDate": earning.get("date"),
+        })
+    
+    return historical
+
+
+def fetch_stock_earnings_info(ticker: str) -> Dict[str, Any]:
+    """
+    Fetch earnings information for a specific stock including next earnings date
+    and recent historical performance.
+    
+    Args:
+        ticker: Stock ticker symbol
+    
+    Returns:
+        Dictionary with next earnings date and historical data
+    """
+    # Get quote which includes next earnings announcement date
+    quote = fetch_fmp_quote(ticker)
+    
+    # Get historical earnings
+    history = fetch_earnings_history(ticker, limit=8)  # Last 2 years of quarterly earnings
+    
+    # Get next earnings from calendar
+    today = datetime.now().strftime("%Y-%m-%d")
+    future = (datetime.now() + timedelta(days=90)).strftime("%Y-%m-%d")
+    
+    next_earnings = None
+    calendar = fetch_earnings_calendar(today, future)
+    for earning in calendar:
+        if earning.get("symbol", "").upper() == ticker.upper():
+            next_earnings = earning
+            break
+    
+    # Calculate stats from historical earnings
+    beats = 0
+    misses = 0
+    meets = 0
+    total = len(history)
+    
+    for h in history:
+        surprise = h.get("epsSurprisePercent")
+        if surprise is not None:
+            if surprise > 0.5:  # Beat by more than 0.5%
+                beats += 1
+            elif surprise < -0.5:  # Missed by more than 0.5%
+                misses += 1
+            else:
+                meets += 1
+    
+    return {
+        "symbol": ticker.upper(),
+        "nextEarningsDate": next_earnings.get("date") if next_earnings else quote.get("earningsAnnouncement"),
+        "nextEarningsTime": next_earnings.get("time") if next_earnings else None,
+        "epsEstimate": next_earnings.get("epsEstimate") if next_earnings else None,
+        "revenueEstimate": next_earnings.get("revenueEstimate") if next_earnings else None,
+        "history": history,
+        "stats": {
+            "totalReported": total,
+            "beats": beats,
+            "misses": misses,
+            "meets": meets,
+            "beatRate": (beats / total * 100) if total > 0 else None,
+        }
+    }
+
+
 def search_fmp(query: str, limit: int = 10) -> List[Dict[str, str]]:
     """
     Search for stocks by company name or ticker symbol using FMP API.
